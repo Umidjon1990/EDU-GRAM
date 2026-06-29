@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f7f8f5;
+  --foreground: #18201d;
+  --card: #ffffff;
+  --card-foreground: #18201d;
+  --muted: #eef1eb;
+  --muted-foreground: #66736c;
+  --border: #dfe5dc;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --accent: #d9a441;
+  --accent-foreground: #1f1a10;
+  --success: #2f8f58;
+  --danger: #b42318;
+  --ring: #0f766e;
+}
+
+.dark {
+  --background: #101713;
+  --foreground: #f4f7f2;
+  --card: #16211b;
+  --card-foreground: #f4f7f2;
+  --muted: #1d2a23;
+  --muted-foreground: #a7b2aa;
+  --border: #2c3a32;
+  --primary: #34d399;
+  --primary-foreground: #09251c;
+  --accent: #f2c15f;
+  --accent-foreground: #1f1a10;
+  --success: #66d18f;
+  --danger: #ff8a7a;
+  --ring: #34d399;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter), Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--primary) 18%, transparent), transparent 32rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 94%, white), var(--background));
+  color: var(--foreground);
+  font-family: var(--font-inter), Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  outline-color: var(--ring);
+}

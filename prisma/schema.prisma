@@ -1,0 +1,441 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum AuditAction {
+  LOGIN_SUCCEEDED
+  LOGIN_FAILED
+  LOGOUT
+  SESSION_REVOKED
+  USER_CREATED
+  USER_DISABLED
+  USER_ENABLED
+  USER_PASSWORD_RESET
+  GROUP_CREATED
+  GROUP_UPDATED
+  GROUP_MEMBER_ADDED
+  GROUP_MEMBER_REMOVED
+  MESSAGE_PINNED
+  MESSAGE_UNPINNED
+  ANNOUNCEMENT_CREATED
+  ASSIGNMENT_CREATED
+  ASSIGNMENT_SUBMITTED
+  ASSIGNMENT_GRADED
+  TEST_CREATED
+  TEST_SUBMITTED
+  AI_REQUEST_CREATED
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+}
+
+enum TestStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum NotificationKind {
+  ANNOUNCEMENT
+  ASSIGNMENT
+  TEST
+  MESSAGE
+  SYSTEM
+}
+
+enum AiRequestStatus {
+  QUEUED
+  COMPLETED
+  FAILED
+}
+
+enum AiFeature {
+  ASSIGNMENT_FEEDBACK
+  TEST_GENERATION
+  CHAT_SUMMARY
+  STUDENT_PROGRESS
+}
+
+enum GroupStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum GroupMemberRole {
+  TEACHER
+  STUDENT
+}
+
+enum MessageType {
+  TEXT
+  FILE
+  VOICE
+  SYSTEM
+}
+
+enum FileAssetKind {
+  FILE
+  AUDIO
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  sessions  Session[]
+  auditLogs AuditLog[]
+  groups    Group[]
+  messages  Message[]
+  files     FileAsset[]
+  announcements Announcement[]
+  assignments Assignment[]
+  tests Test[]
+  notifications Notification[]
+  aiRequests AiRequest[]
+}
+
+model User {
+  id             String     @id @default(cuid())
+  organizationId String
+  fullName       String
+  username       String     @unique
+  passwordHash   String
+  role           UserRole
+  status         UserStatus @default(ACTIVE)
+  lastLoginAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sessions     Session[]
+  auditLogs    AuditLog[]
+  teachingGroups Group[]       @relation("GroupTeacher")
+  groupMembers   GroupMember[]
+  messages       Message[]
+  files          FileAsset[]
+  announcements Announcement[]
+  assignments Assignment[]
+  submissions AssignmentSubmission[]
+  tests Test[]
+  testAttempts TestAttempt[]
+  pinnedMessages PinnedMessage[]
+  notifications Notification[]
+  aiRequests AiRequest[]
+
+  @@unique([organizationId, username])
+  @@index([organizationId, role])
+  @@index([organizationId, status])
+}
+
+model Group {
+  id             String      @id @default(cuid())
+  organizationId String
+  teacherId      String
+  name           String
+  description    String?
+  status         GroupStatus @default(ACTIVE)
+  chatEnabled    Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teacher      User          @relation("GroupTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  members      GroupMember[]
+  messages     Message[]
+  pinnedMessages PinnedMessage[]
+  announcements Announcement[]
+  assignments Assignment[]
+  tests Test[]
+
+  @@index([organizationId, teacherId])
+  @@index([organizationId, status])
+}
+
+model Assignment {
+  id             String           @id @default(cuid())
+  organizationId String
+  groupId        String
+  teacherId      String
+  title          String
+  description    String
+  dueAt          DateTime?
+  status         AssignmentStatus @default(PUBLISHED)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions  AssignmentSubmission[]
+
+  @@index([organizationId, groupId, createdAt])
+  @@index([teacherId, createdAt])
+}
+
+model AssignmentSubmission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  body         String
+  status       SubmissionStatus @default(SUBMITTED)
+  grade        Int?
+  feedback     String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId, createdAt])
+}
+
+model Test {
+  id             String     @id @default(cuid())
+  organizationId String
+  groupId        String
+  teacherId      String
+  title          String
+  description    String?
+  status         TestStatus @default(PUBLISHED)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  questions    TestQuestion[]
+  attempts     TestAttempt[]
+
+  @@index([organizationId, groupId, createdAt])
+  @@index([teacherId, createdAt])
+}
+
+model TestQuestion {
+  id            String   @id @default(cuid())
+  testId        String
+  prompt        String
+  options       Json
+  correctAnswer String
+  points        Int      @default(1)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  test Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@index([testId, order])
+}
+
+model TestAttempt {
+  id          String   @id @default(cuid())
+  testId      String
+  studentId   String
+  answers     Json
+  score       Int
+  maxScore    Int
+  submittedAt DateTime @default(now())
+
+  test    Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, studentId])
+  @@index([studentId, submittedAt])
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  kind           NotificationKind
+  title          String
+  body           String
+  href           String?
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, readAt, createdAt])
+}
+
+model AiRequest {
+  id             String          @id @default(cuid())
+  organizationId String
+  userId         String
+  feature        AiFeature
+  status         AiRequestStatus @default(QUEUED)
+  input          Json
+  output         Json?
+  error          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, feature, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  organizationId String
+  groupId        String
+  senderId       String
+  type           MessageType @default(TEXT)
+  body           String
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime    @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments  MessageAttachment[]
+  pinnedInGroups PinnedMessage[]
+
+  @@index([organizationId, groupId, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model PinnedMessage {
+  id        String   @id @default(cuid())
+  groupId   String
+  messageId String
+  pinnedById String
+  createdAt DateTime @default(now())
+
+  group    Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  pinnedBy User    @relation(fields: [pinnedById], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, messageId])
+  @@index([groupId, createdAt])
+}
+
+model Announcement {
+  id             String   @id @default(cuid())
+  organizationId String
+  groupId        String
+  authorId       String
+  title          String
+  body           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, groupId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model FileAsset {
+  id             String        @id @default(cuid())
+  organizationId String
+  ownerId        String
+  kind           FileAssetKind
+  storageKey     String        @unique
+  originalName   String
+  mimeType       String
+  size           Int
+  createdAt      DateTime      @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  attachments  MessageAttachment[]
+
+  @@index([organizationId, ownerId])
+  @@index([organizationId, createdAt])
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  fileId    String
+  createdAt DateTime @default(now())
+
+  message Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file    FileAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, fileId])
+  @@index([fileId])
+}
+
+model GroupMember {
+  id        String          @id @default(cuid())
+  groupId   String
+  userId    String
+  role      GroupMemberRole
+  createdAt DateTime        @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId, role])
+}
+
+model Session {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  tokenHash      String    @unique
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  userAgent      String?
+  ipAddress      String?
+  revokedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([organizationId, expiresAt])
+}
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         AuditAction
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime    @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
+}

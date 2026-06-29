@@ -232,6 +232,10 @@ export const groupManagementDictionary = {
 export const chatDictionary = {
   metaTitle: "Guruh chati",
   title: "Guruh chati",
+  inboxTitle: "Xabarlar",
+  inboxDescription: "Guruh chatlarini shu yerdan oching va darsdagi muloqotni kuzating.",
+  noChats: "Hali chat yo'q. Avval guruh yarating.",
+  lastMessage: "So'nggi xabar",
   live: "Jonli chat",
   teacher: "Ustoz",
   members: "A'zolar",

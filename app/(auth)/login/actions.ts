@@ -28,7 +28,7 @@ export async function loginAction(
   const parsed = loginSchema.safeParse({
     username: String(formData.get("username") ?? ""),
     password: String(formData.get("password") ?? ""),
-    remember: formData.get("remember"),
+    remember: formData.get("remember") ?? undefined,
   });
 
   if (!parsed.success) {

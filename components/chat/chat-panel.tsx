@@ -1,10 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { Download, Mic, Paperclip, SendHorizonal, Square } from "lucide-react";
 
 import {
   createMessageAction,
+  deleteMessageAction,
+  editMessageAction,
   type MessageActionState,
 } from "@/features/messages/actions";
 import { pinMessageAction, unpinMessageAction } from "@/features/announcements/actions";
@@ -15,6 +18,14 @@ type ChatMessage = {
   id: string;
   body: string;
   createdAt: string;
+  editedAt: string | null;
+  replyTo: {
+    id: string;
+    body: string;
+    sender: {
+      fullName: string;
+    };
+  } | null;
   sender: {
     id: string;
     fullName: string;
@@ -63,6 +74,8 @@ export function ChatPanel({
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "ready"
   >("idle");
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const streamUrl = useMemo(
     () => `/api/groups/${groupId}/messages/stream`,
@@ -129,6 +142,15 @@ export function ChatPanel({
     mediaRecorderRef.current?.stop();
   }
 
+  function submitOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    formRef.current?.requestSubmit();
+  }
+
   return (
     <section className="grid min-h-[34rem] overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
       <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
@@ -152,6 +174,8 @@ export function ChatPanel({
           <div className="grid gap-3">
             {messages.map((message) => {
               const own = message.sender.id === currentUserId;
+              const canDelete = own || canPin;
+              const isEditing = editingId === message.id;
 
               return (
                 <article
@@ -166,7 +190,48 @@ export function ChatPanel({
                     <span>{message.sender.fullName}</span>
                     <time>{formatTime(message.createdAt)}</time>
                   </div>
-                  <p className="whitespace-pre-wrap leading-7">{message.body}</p>
+                  {message.replyTo ? (
+                    <button
+                      className={
+                        own
+                          ? "mb-2 block w-full rounded-2xl bg-white/15 px-3 py-2 text-left text-xs"
+                          : "mb-2 block w-full rounded-2xl bg-background px-3 py-2 text-left text-xs"
+                      }
+                      onClick={() => setReplyTo(message)}
+                      type="button"
+                    >
+                      <span className="block font-black">{message.replyTo.sender.fullName}</span>
+                      <span className="mt-1 line-clamp-2 opacity-80">{message.replyTo.body}</span>
+                    </button>
+                  ) : null}
+                  {isEditing ? (
+                    <form action={editMessageAction} className="grid gap-2">
+                      <input name="messageId" type="hidden" value={message.id} />
+                      <textarea
+                        className="min-h-20 rounded-2xl border border-border bg-background px-3 py-2 text-foreground outline-none"
+                        defaultValue={message.body}
+                        name="body"
+                        required
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="md" type="submit">
+                          {t.saveEdit}
+                        </Button>
+                        <Button
+                          onClick={() => setEditingId(null)}
+                          type="button"
+                          variant="secondary"
+                        >
+                          {t.cancel}
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p className="whitespace-pre-wrap leading-7">{message.body}</p>
+                  )}
+                  {message.editedAt ? (
+                    <p className="mt-1 text-xs font-semibold opacity-70">{t.edited}</p>
+                  ) : null}
                   {message.attachments.length > 0 ? (
                     <div className="mt-3 grid gap-2">
                       {message.attachments.map((attachment) => (
@@ -204,21 +269,47 @@ export function ChatPanel({
                       ))}
                     </div>
                   ) : null}
-                  {canPin ? (
-                    <form
-                      action={message.pinned ? unpinMessageAction : pinMessageAction}
-                      className="mt-2"
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <button
+                      className="text-xs font-bold opacity-75 hover:opacity-100"
+                      onClick={() => setReplyTo(message)}
+                      type="button"
                     >
-                      <input name="groupId" type="hidden" value={groupId} />
-                      <input name="messageId" type="hidden" value={message.id} />
+                      {t.reply}
+                    </button>
+                    {own ? (
                       <button
                         className="text-xs font-bold opacity-75 hover:opacity-100"
-                        type="submit"
+                        onClick={() => setEditingId(message.id)}
+                        type="button"
                       >
-                        {message.pinned ? t.unpin : t.pin}
+                        {t.edit}
                       </button>
-                    </form>
-                  ) : null}
+                    ) : null}
+                    {canDelete ? (
+                      <form action={deleteMessageAction}>
+                        <input name="messageId" type="hidden" value={message.id} />
+                        <button
+                          className="text-xs font-bold opacity-75 hover:opacity-100"
+                          type="submit"
+                        >
+                          {t.delete}
+                        </button>
+                      </form>
+                    ) : null}
+                    {canPin ? (
+                      <form action={message.pinned ? unpinMessageAction : pinMessageAction}>
+                        <input name="groupId" type="hidden" value={groupId} />
+                        <input name="messageId" type="hidden" value={message.id} />
+                        <button
+                          className="text-xs font-bold opacity-75 hover:opacity-100"
+                          type="submit"
+                        >
+                          {message.pinned ? t.unpin : t.pin}
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
                 </article>
               );
             })}
@@ -230,9 +321,30 @@ export function ChatPanel({
       <form
         action={formAction}
         className="grid gap-3 border-t border-border p-4 sm:grid-cols-[1fr_auto]"
+        onSubmit={() => setReplyTo(null)}
         ref={formRef}
       >
         <input name="groupId" type="hidden" value={groupId} />
+        <input name="replyToId" type="hidden" value={replyTo?.id ?? ""} />
+        {replyTo ? (
+          <div className="rounded-2xl bg-muted px-4 py-3 sm:col-span-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-primary">{t.replyingTo}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                  <b>{replyTo.sender.fullName}:</b> {replyTo.body}
+                </p>
+              </div>
+              <button
+                className="text-xs font-bold text-muted-foreground"
+                onClick={() => setReplyTo(null)}
+                type="button"
+              >
+                {t.cancel}
+              </button>
+            </div>
+          </div>
+        ) : null}
         <label className="sr-only" htmlFor="body">
           {t.inputLabel}
         </label>
@@ -240,6 +352,7 @@ export function ChatPanel({
           className="min-h-12 resize-none rounded-2xl border border-border bg-background px-4 py-3 outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
           id="body"
           name="body"
+          onKeyDown={submitOnEnter}
           placeholder={t.inputPlaceholder}
         />
         <label className="flex min-h-12 cursor-pointer items-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-bold text-muted-foreground transition hover:bg-muted sm:col-span-2">

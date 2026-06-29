@@ -309,6 +309,7 @@ model Message {
   organizationId String
   groupId        String
   senderId       String
+  replyToId      String?
   type           MessageType @default(TEXT)
   body           String
   editedAt       DateTime?
@@ -318,11 +319,14 @@ model Message {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?     @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("MessageReplies")
   attachments  MessageAttachment[]
   pinnedInGroups PinnedMessage[]
 
   @@index([organizationId, groupId, createdAt])
   @@index([senderId, createdAt])
+  @@index([replyToId])
 }
 
 model PinnedMessage {

@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { BulkStudentForm } from "@/components/users/bulk-student-form";
 import { ManagedUserForm } from "@/components/users/managed-user-form";
 import { ManagedUserList } from "@/components/users/managed-user-list";
 import {
@@ -49,11 +50,14 @@ export default async function StudentsPage() {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[24rem_1fr]">
-          <ManagedUserForm
-            action={createStudentAction}
-            submitLabel={t.submit}
-            title={t.createTitle}
-          />
+          <div className="grid content-start gap-6">
+            <ManagedUserForm
+              action={createStudentAction}
+              submitLabel={t.submit}
+              title={t.createTitle}
+            />
+            <BulkStudentForm />
+          </div>
           <ManagedUserList
             passwordAction={resetStudentPasswordAction}
             statusAction={setStudentStatusAction}

@@ -25,6 +25,14 @@ async function loadMessages(groupId: string, organizationId: string) {
       id: true,
       body: true,
       createdAt: true,
+      editedAt: true,
+      replyTo: {
+        select: {
+          id: true,
+          body: true,
+          sender: { select: { fullName: true } },
+        },
+      },
       sender: {
         select: {
           id: true,
@@ -53,6 +61,7 @@ async function loadMessages(groupId: string, organizationId: string) {
   return messages.reverse().map((message) => ({
     ...message,
     createdAt: message.createdAt.toISOString(),
+    editedAt: message.editedAt?.toISOString() ?? null,
     attachments: message.attachments.map((attachment) => attachment.file),
     pinned: message.pinnedInGroups.length > 0,
   }));

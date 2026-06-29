@@ -36,4 +36,8 @@ export const resetManagedUserPasswordSchema = z.object({
     .max(128, "Parol juda uzun"),
 });
 
+export const bulkCreateStudentsSchema = z.object({
+  bulkText: z.string().trim().min(5, "O'quvchilar ro'yxatini kiriting").max(20000),
+});
+
 export type CreateManagedUserInput = z.infer<typeof createManagedUserSchema>;

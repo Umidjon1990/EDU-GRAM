@@ -42,7 +42,6 @@ export async function createAssignmentAction(
     groupId: formData.get("groupId"),
     title: formData.get("title"),
     description: formData.get("description"),
-    section: formData.get("section"),
     responseMode: formData.get("responseMode"),
     dueAt: formData.get("dueAt"),
     maxScore: formData.get("maxScore") || 100,
@@ -83,7 +82,7 @@ export async function createAssignmentAction(
         teacherId: user.id,
         title: parsed.data.title,
         description: parsed.data.description,
-        section: parsed.data.section,
+        section: getDefaultSection(parsed.data.responseMode),
         responseMode: parsed.data.responseMode,
         sourceFileId: sourceFileAsset?.id,
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
@@ -160,7 +159,7 @@ export async function bulkCreateAssignmentsAction(
         teacherId: user.id,
         title: item.title,
         description: parsed.data.description || item.title,
-        section: item.section,
+        section: getDefaultSection(item.responseMode),
         responseMode: item.responseMode,
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
         maxScore: parsed.data.maxScore,
@@ -201,6 +200,20 @@ export async function bulkCreateAssignmentsAction(
     status: "success",
     message: t.bulkCreated.replace("{count}", String(parsed.data.items.length)),
   };
+}
+
+function getDefaultSection(responseMode: AssignmentResponseMode) {
+  if (responseMode === AssignmentResponseMode.AUDIO) {
+    return "ORAL_AUDIO_TRANSLATION" as const;
+  }
+  if (responseMode === AssignmentResponseMode.IMAGE) {
+    return "READING_WRITTEN_TRANSLATION" as const;
+  }
+  if (responseMode === AssignmentResponseMode.VIDEO) {
+    return "MEMORIZATION_VIDEO" as const;
+  }
+
+  return "CUSTOM" as const;
 }
 
 export async function submitAssignmentAction(

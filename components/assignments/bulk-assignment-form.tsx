@@ -11,18 +11,11 @@ import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 
 const t = assignmentDictionary;
 const initialState: AssignmentState = { status: "idle" };
-const assignmentSections = [
-  "ORAL_AUDIO_TRANSLATION",
-  "READING_WRITTEN_TRANSLATION",
-  "MEMORIZATION_VIDEO",
-  "CUSTOM",
-] as const;
 const responseModes = ["TEXT", "AUDIO", "IMAGE", "VIDEO", "FILE"] as const;
 
 type AssignmentRow = {
   id: string;
   title: string;
-  section: (typeof assignmentSections)[number];
   responseMode: (typeof responseModes)[number];
 };
 
@@ -39,7 +32,6 @@ export function BulkAssignmentForm({
     {
       id: crypto.randomUUID(),
       title: "",
-      section: "ORAL_AUDIO_TRANSLATION",
       responseMode: "AUDIO",
     },
   ]);
@@ -47,9 +39,8 @@ export function BulkAssignmentForm({
     () =>
       JSON.stringify(
         rows
-          .map(({ responseMode, section, title }) => ({
+          .map(({ responseMode, title }) => ({
             responseMode,
-            section,
             title: title.trim(),
           }))
           .filter((row) => row.title.length > 0),
@@ -69,7 +60,6 @@ export function BulkAssignmentForm({
       {
         id: crypto.randomUUID(),
         title: "",
-        section: "READING_WRITTEN_TRANSLATION",
         responseMode: "IMAGE",
       },
     ]);
@@ -116,22 +106,7 @@ export function BulkAssignmentForm({
                 required
                 value={row.title}
               />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <select
-                  className="rounded-2xl border border-border bg-background px-4 py-3"
-                  onChange={(event) =>
-                    updateRow(row.id, {
-                      section: event.target.value as AssignmentRow["section"],
-                    })
-                  }
-                  value={row.section}
-                >
-                  {assignmentSections.map((section) => (
-                    <option key={section} value={section}>
-                      {t.sections[section]}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid gap-2">
                 <select
                   className="rounded-2xl border border-border bg-background px-4 py-3"
                   onChange={(event) =>

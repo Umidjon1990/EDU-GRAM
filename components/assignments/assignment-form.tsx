@@ -7,12 +7,6 @@ import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 
 const t = assignmentDictionary;
 const initialState: AssignmentState = { status: "idle" };
-const assignmentSections = [
-  "ORAL_AUDIO_TRANSLATION",
-  "READING_WRITTEN_TRANSLATION",
-  "MEMORIZATION_VIDEO",
-  "CUSTOM",
-] as const;
 const responseModes = ["TEXT", "AUDIO", "IMAGE", "VIDEO", "FILE"] as const;
 
 export function AssignmentForm({ groups }: { groups: { id: string; name: string }[] }) {
@@ -26,13 +20,7 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
           <option value="">{t.chooseGroup}</option>
           {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
-        <select className="rounded-2xl border border-border bg-background px-4 py-3" name="section" required>
-          {assignmentSections.map((section) => (
-            <option key={section} value={section}>
-              {t.sections[section]}
-            </option>
-          ))}
-        </select>
+        <input className="rounded-2xl border border-border bg-background px-4 py-3" name="title" placeholder={t.titlePlaceholder} required />
         <select className="rounded-2xl border border-border bg-background px-4 py-3" name="responseMode" required>
           {responseModes.map((mode) => (
             <option key={mode} value={mode}>
@@ -40,7 +28,6 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
             </option>
           ))}
         </select>
-        <input className="rounded-2xl border border-border bg-background px-4 py-3" name="title" placeholder={t.titlePlaceholder} required />
         <textarea className="min-h-28 rounded-2xl border border-border bg-background px-4 py-3" name="description" placeholder={t.descriptionPlaceholder} required />
         <label className="grid gap-2 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-sm font-bold text-muted-foreground">
           <span>{t.sourceFile}</span>

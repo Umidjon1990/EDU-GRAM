@@ -1,11 +1,10 @@
-import { AssignmentResponseMode, AssignmentSection } from "@prisma/client";
+import { AssignmentResponseMode } from "@prisma/client";
 import { z } from "zod";
 
 export const createAssignmentSchema = z.object({
   groupId: z.string().cuid("Guruh topilmadi"),
   title: z.string().trim().min(2, "Topshiriq nomini kiriting").max(160),
   description: z.string().trim().min(3, "Topshiriq matnini kiriting").max(5000),
-  section: z.nativeEnum(AssignmentSection),
   responseMode: z.nativeEnum(AssignmentResponseMode),
   dueAt: z.string().optional(),
   maxScore: z.coerce.number().int().min(1, "Ball kamida 1 bo'lishi kerak").max(1000),
@@ -22,7 +21,6 @@ export const bulkCreateAssignmentsSchema = z.object({
     .array(
       z.object({
         title: z.string().trim().min(2, "Topshiriq nomini kiriting").max(160),
-        section: z.nativeEnum(AssignmentSection),
         responseMode: z.nativeEnum(AssignmentResponseMode),
       }),
     )

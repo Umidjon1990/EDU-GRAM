@@ -375,7 +375,7 @@ export const assignmentDictionary = {
   createTitle: "Yangi topshiriq",
   bulkCreateTitle: "Bir nechta topshiriq yaratish",
   bulkCreateDescription:
-    "Bir guruh uchun bir martada bir nechta topshiriq nomi va turini kiriting.",
+    "Bir guruh uchun topshiriq nomi va yuborish formatini kiriting.",
   addAssignmentRow: "Yana topshiriq qo'shish",
   removeAssignmentRow: "Qatorni olib tashlash",
   bulkCreate: "Barchasini yaratish",

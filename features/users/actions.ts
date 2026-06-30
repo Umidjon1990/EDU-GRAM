@@ -255,6 +255,23 @@ function parseBulkStudents(text: string) {
     .filter(Boolean);
   const students: { fullName: string; username: string; password: string }[] = [];
 
+  if (lines.some((line) => /[,;\t]/.test(line))) {
+    for (const line of lines) {
+      const [fullName, phone] = splitImportLine(line);
+
+      if (!fullName || !phone) continue;
+
+      const username = normalizeUsername(fullName.split(/\s+/).at(-1) ?? fullName);
+      const password = phone.replace(/\s+/g, "");
+
+      if (username.length >= 3) {
+        students.push({ fullName, username, password });
+      }
+    }
+
+    return students;
+  }
+
   for (let index = 0; index < lines.length; index += 2) {
     const fullName = lines[index];
     const phone = lines[index + 1];
@@ -271,6 +288,13 @@ function parseBulkStudents(text: string) {
   }
 
   return students;
+}
+
+function splitImportLine(line: string) {
+  return line
+    .split(/\t|,|;/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function normalizeUsername(value: string) {

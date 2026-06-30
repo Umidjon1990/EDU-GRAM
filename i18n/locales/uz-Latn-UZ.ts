@@ -187,13 +187,23 @@ export const userManagementDictionary = {
     listTitle: "O'quvchilar ro'yxati",
     submit: "O'quvchi yaratish",
     created: "O'quvchi hisobi yaratildi",
-    bulkTitle: "Bulk qo'shish",
+    bulkTitle: "Ommaviy qo'shish",
     bulkDescription:
-      "Har bir o'quvchi uchun 2 qator yozing: birinchi qator ism-familiya, ikkinchi qator telefon raqam.",
+      "Matn, CSV yoki Exceldan ko'chirilgan jadvalni kiriting. Familiya login, telefon raqam parol bo'ladi.",
     bulkTemplate:
       "Ali Valiyev\n998901234567\nDilnoza Karimova\n998909876543",
+    bulkCsvTemplate:
+      "Ali Valiyev,998901234567\nDilnoza Karimova,998909876543",
     bulkPlaceholder:
-      "Ali Valiyev\n998901234567\nDilnoza Karimova\n998909876543",
+      "Ali Valiyev,998901234567\nDilnoza Karimova,998909876543",
+    bulkPreview: "Importdan oldingi ko'rinish",
+    bulkValidRows: "{count} ta o'quvchi qo'shiladi",
+    bulkInvalidRows: "Xato qatorlar",
+    bulkNoPreview: "Ro'yxatni kiritsangiz, bu yerda oldindan ko'rinadi.",
+    bulkFile: "CSV fayl tanlash",
+    bulkFullName: "Ism familiya",
+    bulkPhone: "Telefon",
+    bulkUsername: "Login",
     bulkSubmit: "O'quvchilarni qo'shish",
     bulkCreated: "{count} ta o'quvchi qo'shildi",
   },

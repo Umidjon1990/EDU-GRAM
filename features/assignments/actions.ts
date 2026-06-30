@@ -151,6 +151,10 @@ export async function submitAssignmentAction(
   });
   if (!assignment) return { status: "error", message: t.errors.notAllowed };
 
+  if (assignment.responseMode !== AssignmentResponseMode.TEXT && !file) {
+    return { status: "error", message: t.errors.invalidData };
+  }
+
   let storedFile = null;
 
   try {

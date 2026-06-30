@@ -376,6 +376,23 @@ export const assignmentDictionary = {
   rubric: "Rubrika",
   rubricPlaceholder: "Masalan: talaffuz 40, grammatika 30, yozma ish 30",
   fileAttachment: "Fayl ilova qilish",
+  videoRecorder: {
+    title: "Video javob yozish",
+    description:
+      "Video 1 daqiqagacha yoziladi. Kamera yuzingizni ko'rishi va nigohingiz ekranga yaqin bo'lishi kerak.",
+    startCamera: "Kamerani yoqish",
+    startRecording: "Yozishni boshlash",
+    stopRecording: "Yozishni to'xtatish",
+    recording: "Yozilmoqda",
+    ready: "Video tayyor",
+    secondsLeft: "{seconds} soniya qoldi",
+    faceReady: "Yuz va nigoh mos",
+    faceMissing: "Yuz ko'rinmayapti",
+    lookAtCamera: "Kameraga qarang",
+    unsupported:
+      "Bu brauzerda yuz nazorati cheklangan. Kamera sifati va vaqt limiti nazorat qilinadi.",
+    compressed: "Video ixcham formatda tayyorlanadi",
+  },
   attachedFiles: "Ilova qilingan fayllar",
   late: "Kechikdi",
   onTime: "Vaqtida",

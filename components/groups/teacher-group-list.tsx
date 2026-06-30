@@ -34,6 +34,7 @@ type TeacherGroupListProps = {
   addAction: (formData: FormData) => Promise<void>;
   removeAction: (formData: FormData) => Promise<void>;
   telegramAction: (formData: FormData) => Promise<void>;
+  telegramResolveAction: (formData: FormData) => Promise<void>;
 };
 
 const t = groupManagementDictionary;
@@ -44,6 +45,7 @@ export function TeacherGroupList({
   removeAction,
   students,
   telegramAction,
+  telegramResolveAction,
 }: TeacherGroupListProps) {
   return (
     <section className="grid gap-4">
@@ -116,6 +118,9 @@ export function TeacherGroupList({
                 <div>
                   <h4 className="font-black">{t.telegramTitle}</h4>
                   <p className="mt-1 text-sm text-muted-foreground">{t.telegramHint}</p>
+                  <p className="mt-2 rounded-2xl bg-card/70 px-3 py-2 text-xs font-bold text-muted-foreground">
+                    {t.telegramAutoHelp}
+                  </p>
                 </div>
                 <label className="flex items-center gap-2 text-sm font-bold">
                   <input
@@ -156,9 +161,14 @@ export function TeacherGroupList({
                     </span>
                   </label>
                 </div>
-                <Button type="submit" variant="secondary">
-                  {t.telegramSave}
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button formAction={telegramResolveAction} type="submit" variant="secondary">
+                    {t.telegramFindChatId}
+                  </Button>
+                  <Button type="submit" variant="secondary">
+                    {t.telegramSave}
+                  </Button>
+                </div>
               </form>
 
               <div className="mt-5 grid gap-2">

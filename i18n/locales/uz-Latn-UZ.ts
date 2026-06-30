@@ -257,11 +257,14 @@ export const groupManagementDictionary = {
   telegramBotToken: "Bot token",
   telegramChatId: "Qabul qiluvchi Chat ID",
   telegramSave: "Telegramni saqlash",
+  telegramFindChatId: "Chat IDni topish",
   telegramHint:
-    "O'quvchi vazifa faylini yuborganda fayl Telegramga o'tadi va lokal xotira bo'shatiladi. Chat ID shaxsiy bot chati yoki Telegram guruhi bo'lishi mumkin.",
+    "O'quvchi vazifa faylini yuborganda fayl Telegramga o'tadi va lokal xotira bo'shatiladi. Telegram yuborishi uchun qabul qiluvchi Chat ID kerak.",
+  telegramAutoHelp:
+    "Qo'lda yozish shart emas: avval botga Telegramda /start yozing, keyin shu yerda Chat IDni topish tugmasini bosing.",
   telegramTokenHelp: "BotFather bergan tokenni kiriting.",
   telegramChatIdHelp:
-    "Shaxsiy botga yuborish uchun avval botga /start yozing, keyin shu shaxsiy chat ID ni kiriting. Guruhga yuborish ixtiyoriy.",
+    "Bot o'ziga xabar yubora olmaydi; u shaxsiy chat yoki guruh manziliga yuboradi.",
   empty: "Hali guruh yo'q.",
   chatEnabled: "Chat yoqilgan",
   active: "Faol",

@@ -7,6 +7,7 @@ import {
   bulkCreateStudentsSchema,
   createManagedUserSchema,
   resetManagedUserPasswordSchema,
+  updateStudentLifecycleStatusSchema,
 } from "@/features/users/user-schema";
 import { hashPassword } from "@/lib/auth/password";
 import { requirePermission } from "@/lib/auth/permissions";
@@ -169,6 +170,41 @@ export async function resetStudentPasswordAction(formData: FormData) {
     revalidateTarget: "/teacher/students",
     formData,
   });
+}
+
+export async function setStudentLifecycleStatusAction(formData: FormData) {
+  const currentUser = await requirePermission("student:update:organization");
+  const parsed = updateStudentLifecycleStatusSchema.safeParse({
+    userId: formData.get("userId"),
+    studentStatus: formData.get("studentStatus"),
+  });
+
+  if (!parsed.success) return;
+
+  await prisma.user.updateMany({
+    where: {
+      id: parsed.data.userId,
+      organizationId: currentUser.organizationId,
+      role: UserRole.STUDENT,
+    },
+    data: {
+      studentStatus: parsed.data.studentStatus,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: currentUser.organizationId,
+      userId: currentUser.id,
+      action: AuditAction.USER_ENABLED,
+      metadata: {
+        targetUserId: parsed.data.userId,
+        studentStatus: parsed.data.studentStatus,
+      },
+    },
+  });
+
+  revalidatePath("/teacher/students");
 }
 
 async function createManagedUser({

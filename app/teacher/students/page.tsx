@@ -7,6 +7,7 @@ import { ManagedUserList } from "@/components/users/managed-user-list";
 import {
   createStudentAction,
   resetStudentPasswordAction,
+  setStudentLifecycleStatusAction,
   setStudentStatusAction,
 } from "@/features/users/actions";
 import { userManagementDictionary } from "@/i18n/locales/uz-Latn-UZ";
@@ -32,6 +33,9 @@ export default async function StudentsPage() {
       fullName: true,
       username: true,
       status: true,
+      studentStatus: true,
+      parentPhone: true,
+      studentNote: true,
       createdAt: true,
     },
   });
@@ -60,6 +64,7 @@ export default async function StudentsPage() {
           </div>
           <ManagedUserList
             passwordAction={resetStudentPasswordAction}
+            studentLifecycleAction={setStudentLifecycleStatusAction}
             statusAction={setStudentStatusAction}
             title={t.listTitle}
             users={students}

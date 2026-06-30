@@ -1,4 +1,4 @@
-import { UserStatus } from "@prisma/client";
+import { StudentLifecycleStatus, UserStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { userManagementDictionary } from "@/i18n/locales/uz-Latn-UZ";
@@ -8,6 +8,9 @@ type ManagedUser = {
   fullName: string;
   username: string;
   status: UserStatus;
+  studentStatus?: StudentLifecycleStatus;
+  parentPhone?: string | null;
+  studentNote?: string | null;
   createdAt: Date;
 };
 
@@ -16,6 +19,7 @@ type ManagedUserListProps = {
   users: ManagedUser[];
   passwordAction: (formData: FormData) => Promise<void>;
   statusAction: (formData: FormData) => Promise<void>;
+  studentLifecycleAction?: (formData: FormData) => Promise<void>;
 };
 
 const t = userManagementDictionary.common;
@@ -23,6 +27,7 @@ const t = userManagementDictionary.common;
 export function ManagedUserList({
   passwordAction,
   statusAction,
+  studentLifecycleAction,
   title,
   users,
 }: ManagedUserListProps) {
@@ -51,6 +56,11 @@ export function ManagedUserList({
                 <th className="border-b border-border pb-3 pr-4 font-bold">
                   {t.createdAt}
                 </th>
+                {studentLifecycleAction ? (
+                  <th className="border-b border-border pb-3 pr-4 font-bold">
+                    {t.studentStatus}
+                  </th>
+                ) : null}
                 <th className="border-b border-border pb-3 pr-4 font-bold">
                   {t.resetPassword}
                 </th>
@@ -88,6 +98,27 @@ export function ManagedUserList({
                     <td className="border-b border-border py-4 pr-4 text-muted-foreground">
                       {formatUzDate(user.createdAt)}
                     </td>
+                    {studentLifecycleAction ? (
+                      <td className="border-b border-border py-4 pr-4">
+                        <form action={studentLifecycleAction}>
+                          <input name="userId" type="hidden" value={user.id} />
+                          <select
+                            className="h-10 rounded-2xl border border-border bg-background px-3 text-sm font-bold"
+                            defaultValue={user.studentStatus ?? StudentLifecycleStatus.ACTIVE}
+                            name="studentStatus"
+                          >
+                            {Object.values(StudentLifecycleStatus).map((status) => (
+                              <option key={status} value={status}>
+                                {t.studentStatuses[status]}
+                              </option>
+                            ))}
+                          </select>
+                          <Button className="ml-2" size="md" type="submit" variant="secondary">
+                            {t.success}
+                          </Button>
+                        </form>
+                      </td>
+                    ) : null}
                     <td className="border-b border-border py-4 pr-4">
                       <form action={passwordAction} className="flex gap-2">
                         <input name="userId" type="hidden" value={user.id} />

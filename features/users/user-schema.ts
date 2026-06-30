@@ -1,4 +1,4 @@
-import { UserStatus } from "@prisma/client";
+import { StudentLifecycleStatus, UserStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const createManagedUserSchema = z.object({
@@ -34,6 +34,11 @@ export const resetManagedUserPasswordSchema = z.object({
     .string()
     .min(8, "Yangi parol kamida 8 ta belgidan iborat bo'lishi kerak")
     .max(128, "Parol juda uzun"),
+});
+
+export const updateStudentLifecycleStatusSchema = z.object({
+  userId: z.string().cuid("O'quvchi topilmadi"),
+  studentStatus: z.nativeEnum(StudentLifecycleStatus),
 });
 
 export const bulkCreateStudentsSchema = z.object({

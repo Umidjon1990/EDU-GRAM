@@ -165,8 +165,17 @@ export const userManagementDictionary = {
     resetPassword: "Parolni yangilash",
     resettingPassword: "Yangilanmoqda...",
     newPasswordPlaceholder: "Yangi vaqtinchalik parol",
+    studentStatus: "O'quv holati",
+    parentPhone: "Ota-ona telefoni",
+    note: "Izoh",
     empty: "Hali foydalanuvchi yo'q.",
     success: "Ma'lumot saqlandi",
+    studentStatuses: {
+      ACTIVE: "Faol",
+      PAUSED: "Pauza",
+      PAYMENT_PENDING: "To'lov kutilyapti",
+      GRADUATED: "Bitirgan",
+    },
   },
   teachers: {
     metaTitle: "Ustozlar",

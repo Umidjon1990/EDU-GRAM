@@ -1,15 +1,19 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+/* eslint-disable @next/next/no-img-element */
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import {
+  AlertCircle,
   Download,
   FileText,
+  Image as ImageIcon,
   Mic,
   Paperclip,
   Search,
   SendHorizonal,
   Square,
+  X,
 } from "lucide-react";
 
 import {
@@ -74,6 +78,7 @@ const initialState: MessageActionState = {
 
 const t = chatDictionary;
 const reactionPresets = ["\u{1F44D}", "\u{2705}", "\u{2753}", "\u{1F44F}", "\u{1F525}"] as const;
+const maxAttachmentSize = 40 * 1024 * 1024;
 
 export function ChatPanel({
   canPin = false,
@@ -93,6 +98,7 @@ export function ChatPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const filePreviewUrlRef = useRef<string | null>(null);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "ready"
   >("idle");
@@ -100,6 +106,36 @@ export function ChatPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<"all" | "media">("all");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [clientError, setClientError] = useState<string | null>(null);
+
+  const clearFilePreview = useCallback((updateState = true) => {
+    if (filePreviewUrlRef.current) {
+      URL.revokeObjectURL(filePreviewUrlRef.current);
+      filePreviewUrlRef.current = null;
+    }
+
+    if (updateState) {
+      setFilePreviewUrl(null);
+    }
+  }, []);
+
+  const setFilePreview = useCallback(
+    (file: File) => {
+      clearFilePreview();
+
+      if (file.type.startsWith("image/")) {
+        const url = URL.createObjectURL(file);
+        filePreviewUrlRef.current = url;
+        setFilePreviewUrl(url);
+        return;
+      }
+
+      setFilePreviewUrl(null);
+    },
+    [clearFilePreview],
+  );
 
   const streamUrl = useMemo(
     () => `/api/groups/${groupId}/messages/stream`,
@@ -126,8 +162,20 @@ export function ChatPanel({
   useEffect(() => {
     if (state.status === "success") {
       formRef.current?.reset();
+      const timer = window.setTimeout(() => {
+        clearFilePreview();
+        setSelectedFile(null);
+        setRecordingState("idle");
+        setClientError(null);
+      }, 0);
+
+      return () => window.clearTimeout(timer);
     }
-  }, [state.status]);
+  }, [clearFilePreview, state.status]);
+
+  useEffect(() => {
+    return () => clearFilePreview(false);
+  }, [clearFilePreview]);
 
   const filteredMessages = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -154,40 +202,82 @@ export function ChatPanel({
   }, [messages, query, viewMode]);
 
   async function startRecording() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
-    audioChunksRef.current = [];
-    mediaRecorderRef.current = recorder;
+    setClientError(null);
 
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        audioChunksRef.current.push(event.data);
-      }
-    };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = recorder;
 
-    recorder.onstop = () => {
-      const mimeType = recorder.mimeType || "audio/webm";
-      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-      const audioFile = new File([audioBlob], `voice-${Date.now()}.webm`, {
-        type: mimeType,
-      });
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(audioFile);
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
 
-      if (fileInputRef.current) {
-        fileInputRef.current.files = dataTransfer.files;
-      }
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || "audio/webm";
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const audioFile = new File([audioBlob], `voice-${Date.now()}.webm`, {
+          type: mimeType,
+        });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(audioFile);
 
-      stream.getTracks().forEach((track) => track.stop());
-      setRecordingState("ready");
-    };
+        if (fileInputRef.current) {
+          fileInputRef.current.files = dataTransfer.files;
+        }
 
-    recorder.start();
-    setRecordingState("recording");
+        stream.getTracks().forEach((track) => track.stop());
+        setFilePreview(audioFile);
+        setSelectedFile(audioFile);
+        setRecordingState("ready");
+      };
+
+      recorder.start();
+      setRecordingState("recording");
+    } catch {
+      setClientError(t.recordingUnavailable);
+      setRecordingState("idle");
+    }
   }
 
   function stopRecording() {
     mediaRecorderRef.current?.stop();
+  }
+
+  function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setClientError(null);
+
+    if (!file) {
+      clearFilePreview();
+      setSelectedFile(null);
+      return;
+    }
+
+    if (file.size > maxAttachmentSize) {
+      event.target.value = "";
+      clearFilePreview();
+      setSelectedFile(null);
+      setClientError(t.attachmentTooLarge);
+      return;
+    }
+
+    setSelectedFile(file);
+    setFilePreview(file);
+    setRecordingState("idle");
+  }
+
+  function clearAttachment() {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    clearFilePreview();
+    setSelectedFile(null);
+    setRecordingState("idle");
+    setClientError(null);
   }
 
   function submitOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -380,6 +470,14 @@ export function ChatPanel({
                               </div>
                             </>
                           ) : null}
+                          {attachment.kind === "IMAGE" ? (
+                            <img
+                              alt={attachment.originalName}
+                              className="mb-3 max-h-80 w-full rounded-2xl object-cover"
+                              loading="lazy"
+                              src={`/api/files/${attachment.id}`}
+                            />
+                          ) : null}
                           <a
                             className="mt-2 flex items-center justify-between gap-3 text-sm font-bold"
                             href={`/api/files/${attachment.id}`}
@@ -501,6 +599,50 @@ export function ChatPanel({
       >
         <input name="groupId" type="hidden" value={groupId} />
         <input name="replyToId" type="hidden" value={replyTo?.id ?? ""} />
+        {selectedFile ? (
+          <div className="rounded-2xl border border-border bg-background px-4 py-3 sm:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  {selectedFile.type.startsWith("image/") ? (
+                    <ImageIcon aria-hidden className="size-5" />
+                  ) : (
+                    <FileText aria-hidden className="size-5" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black">{selectedFile.name}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
+                    {isPending
+                      ? t.attachmentUploading
+                      : t.attachmentReady.replace("{size}", formatSize(selectedFile.size))}
+                  </p>
+                </div>
+              </div>
+              <button
+                aria-label={t.removeAttachment}
+                className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"
+                disabled={isPending}
+                onClick={clearAttachment}
+                type="button"
+              >
+                <X aria-hidden className="size-4" />
+              </button>
+            </div>
+            {filePreviewUrl ? (
+              <img
+                alt={t.imagePreview}
+                className="mt-3 max-h-56 w-full rounded-2xl object-cover"
+                src={filePreviewUrl}
+              />
+            ) : null}
+            {isPending ? (
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {replyTo ? (
           <div className="rounded-2xl bg-muted px-4 py-3 sm:col-span-2">
             <div className="flex items-start justify-between gap-3">
@@ -535,19 +677,27 @@ export function ChatPanel({
           {t.attachment}
           <span className="font-medium">({t.attachmentHint})</span>
           <input
-            accept="application/pdf,image/jpeg,image/png,image/webp,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,video/mp4,video/webm,video/quicktime"
+            accept="application/pdf,image/*,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,video/mp4,video/webm,video/quicktime"
             className="sr-only"
             name="attachment"
+            onChange={handleAttachmentChange}
             ref={fileInputRef}
             type="file"
           />
         </label>
         <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
           {recordingState === "recording" ? (
-            <Button onClick={stopRecording} type="button" variant="secondary">
-              <Square aria-hidden className="size-4" />
-              {t.stopRecording}
-            </Button>
+            <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-danger/20 bg-danger/10 px-3 text-danger">
+              <VoiceWave />
+              <button
+                className="inline-flex items-center gap-2 text-sm font-black"
+                onClick={stopRecording}
+                type="button"
+              >
+                <Square aria-hidden className="size-4" />
+                {t.stopRecording}
+              </button>
+            </div>
           ) : (
             <Button onClick={startRecording} type="button" variant="secondary">
               <Mic aria-hidden className="size-4" />
@@ -569,8 +719,28 @@ export function ChatPanel({
             {state.message}
           </p>
         ) : null}
+        {clientError ? (
+          <p className="inline-flex items-center gap-2 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger sm:col-span-2">
+            <AlertCircle aria-hidden className="size-4" />
+            {clientError}
+          </p>
+        ) : null}
       </form>
     </section>
+  );
+}
+
+function VoiceWave() {
+  return (
+    <span aria-label={t.recordingNow} className="flex h-8 items-center gap-1">
+      {[0, 1, 2, 3, 4].map((item) => (
+        <span
+          className="h-3 w-1 rounded-full bg-current animate-[voice-wave_0.9s_ease-in-out_infinite]"
+          key={item}
+          style={{ animationDelay: `${item * 90}ms` }}
+        />
+      ))}
+    </span>
   );
 }
 

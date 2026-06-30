@@ -20,7 +20,13 @@ const allowedDocumentTypes = new Set([
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ]);
 
-const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedImageTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
 const allowedVideoTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 export type StoredFile = {

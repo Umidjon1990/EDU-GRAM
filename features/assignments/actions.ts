@@ -44,7 +44,6 @@ export async function createAssignmentAction(
     description: formData.get("description"),
     responseMode: formData.get("responseMode"),
     dueAt: formData.get("dueAt"),
-    maxScore: formData.get("maxScore") || 100,
     rubric: formData.get("rubric"),
   });
   if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message ?? t.errors.invalidData };
@@ -86,7 +85,7 @@ export async function createAssignmentAction(
         responseMode: parsed.data.responseMode,
         sourceFileId: sourceFileAsset?.id,
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
-        maxScore: parsed.data.maxScore,
+        maxScore: 100,
         rubric: parsed.data.rubric ? { text: parsed.data.rubric } : undefined,
       },
       select: { id: true },
@@ -130,7 +129,6 @@ export async function bulkCreateAssignmentsAction(
     groupId: formData.get("groupId"),
     description: formData.get("description"),
     dueAt: formData.get("dueAt"),
-    maxScore: formData.get("maxScore") || 100,
     rubric: formData.get("rubric"),
     items,
   });
@@ -162,7 +160,7 @@ export async function bulkCreateAssignmentsAction(
         section: getDefaultSection(item.responseMode),
         responseMode: item.responseMode,
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
-        maxScore: parsed.data.maxScore,
+        maxScore: 100,
         rubric: parsed.data.rubric ? { text: parsed.data.rubric } : undefined,
       })),
     });

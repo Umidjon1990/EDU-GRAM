@@ -7,7 +7,6 @@ export const createAssignmentSchema = z.object({
   description: z.string().trim().min(3, "Topshiriq matnini kiriting").max(5000),
   responseMode: z.nativeEnum(AssignmentResponseMode),
   dueAt: z.string().optional(),
-  maxScore: z.coerce.number().int().min(1, "Ball kamida 1 bo'lishi kerak").max(1000),
   rubric: z.string().trim().max(2000, "Rubrika juda uzun").optional().or(z.literal("")),
 });
 
@@ -15,7 +14,6 @@ export const bulkCreateAssignmentsSchema = z.object({
   groupId: z.string().cuid("Guruh topilmadi"),
   description: z.string().trim().max(5000).optional().or(z.literal("")),
   dueAt: z.string().optional(),
-  maxScore: z.coerce.number().int().min(1, "Ball kamida 1 bo'lishi kerak").max(1000),
   rubric: z.string().trim().max(2000, "Rubrika juda uzun").optional().or(z.literal("")),
   items: z
     .array(

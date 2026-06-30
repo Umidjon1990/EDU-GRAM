@@ -149,14 +149,6 @@ export function BulkAssignmentForm({
           name="dueAt"
           type="datetime-local"
         />
-        <input
-          className="rounded-2xl border border-border bg-background px-4 py-3"
-          defaultValue={100}
-          min={1}
-          name="maxScore"
-          placeholder={t.maxScore}
-          type="number"
-        />
         <textarea
           className="min-h-20 rounded-2xl border border-border bg-background px-4 py-3"
           name="rubric"

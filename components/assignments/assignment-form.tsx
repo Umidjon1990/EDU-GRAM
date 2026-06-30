@@ -39,7 +39,6 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
           />
         </label>
         <input className="rounded-2xl border border-border bg-background px-4 py-3" name="dueAt" type="datetime-local" />
-        <input className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={100} min={1} name="maxScore" placeholder={t.maxScore} type="number" />
         <textarea className="min-h-24 rounded-2xl border border-border bg-background px-4 py-3" name="rubric" placeholder={t.rubricPlaceholder} />
         <div className="grid gap-2 rounded-2xl bg-muted p-3 text-sm">
           <p className="font-black">{t.templates}</p>

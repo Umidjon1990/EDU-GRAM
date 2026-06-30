@@ -41,6 +41,7 @@ export default async function StudentAssignmentsPage() {
       },
     },
   });
+  const assignmentFolders = groupAssignmentsByDate(assignments);
 
   return (
     <AppShell fullName={user.fullName} role={user.role}>
@@ -50,8 +51,21 @@ export default async function StudentAssignmentsPage() {
           <h1 className="mt-3 text-4xl font-black">{t.studentTitle}</h1>
         </section>
         {assignments.length === 0 ? <p className="rounded-3xl border border-border bg-card p-6 text-muted-foreground">{t.noAssignments}</p> : (
-          <section className="grid gap-4 md:grid-cols-2">
-            {assignments.map((assignment) => {
+          <section className="grid gap-4">
+            {assignmentFolders.map((folder, folderIndex) => (
+              <details
+                className="rounded-3xl border border-border bg-card p-4 shadow-sm"
+                key={folder.key}
+                open={folderIndex === 0}
+              >
+                <summary className="flex cursor-pointer items-center justify-between gap-3">
+                  <span className="text-2xl font-black">{folder.label}</span>
+                  <span className="rounded-full bg-muted px-3 py-1 text-sm font-black text-muted-foreground">
+                    {folder.assignments.length} {t.assignmentsCount}
+                  </span>
+                </summary>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {folder.assignments.map((assignment) => {
               const submission = assignment.submissions[0];
               return (
                 <article className="rounded-3xl border border-border bg-card p-5 shadow-sm" key={assignment.id}>
@@ -145,6 +159,9 @@ export default async function StudentAssignmentsPage() {
                 </article>
               );
             })}
+                </div>
+              </details>
+            ))}
           </section>
         )}
       </div>
@@ -155,6 +172,33 @@ export default async function StudentAssignmentsPage() {
 function formatSeconds(seconds: number) {
   if (seconds < 60) return `${seconds} soniya`;
   return `${Math.round(seconds / 60)} daqiqa`;
+}
+
+function groupAssignmentsByDate<T extends { createdAt: Date }>(assignments: T[]) {
+  const folders = new Map<string, { key: string; label: string; assignments: T[] }>();
+
+  for (const assignment of assignments) {
+    const key = new Intl.DateTimeFormat("sv-SE", {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: "Asia/Tashkent",
+      year: "numeric",
+    }).format(assignment.createdAt);
+    const label = new Intl.DateTimeFormat("uz-Latn-UZ", {
+      day: "2-digit",
+      month: "long",
+      timeZone: "Asia/Tashkent",
+      year: "numeric",
+    }).format(assignment.createdAt);
+
+    if (!folders.has(key)) {
+      folders.set(key, { key, label, assignments: [] });
+    }
+
+    folders.get(key)?.assignments.push(assignment);
+  }
+
+  return Array.from(folders.values());
 }
 
 function getRubricText(value: unknown) {

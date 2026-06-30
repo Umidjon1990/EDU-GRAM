@@ -5,14 +5,17 @@ import { BulkAssignmentForm } from "@/components/assignments/bulk-assignment-for
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
+  deleteAssignmentAction,
   gradeSubmissionAction,
   returnSubmissionForRevisionAction,
+  updateAssignmentAction,
 } from "@/features/assignments/actions";
 import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 import { requirePermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
 
 const t = assignmentDictionary;
+const responseModes = ["TEXT", "AUDIO", "IMAGE", "VIDEO", "FILE"] as const;
 
 export const metadata = { title: t.metaTitle };
 
@@ -87,12 +90,13 @@ export default async function TeacherAssignmentsPage() {
                     <h2 className="mt-1 text-2xl font-black">{assignment.title}</h2>
                   </div>
                   <span className="rounded-full bg-muted px-3 py-1 text-sm font-black">
-                    {assignment.maxScore} {t.grade}
+                    {t.maxAttachmentCount}: {assignment.maxAttachmentCount}
                   </span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-sm font-black text-muted-foreground">
                   <span className="rounded-full bg-muted px-3 py-1">{t.sections[assignment.section]}</span>
                   <span className="rounded-full bg-muted px-3 py-1">{t.responseHint}: {t.responseModes[assignment.responseMode]}</span>
+                  <span className="rounded-full bg-muted px-3 py-1">{t.createdAt}: {formatUzDate(assignment.createdAt)}</span>
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-muted-foreground">{assignment.description}</p>
                 {assignment.sourceFile ? (
@@ -117,6 +121,55 @@ export default async function TeacherAssignmentsPage() {
                     <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{rubric}</p>
                   </div>
                 ) : null}
+                <details className="mt-4 rounded-2xl border border-border bg-muted p-3">
+                  <summary className="cursor-pointer font-black">{t.editAssignment}</summary>
+                  <form action={updateAssignmentAction} className="mt-4 grid gap-3">
+                    <input name="assignmentId" type="hidden" value={assignment.id} />
+                    <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.groupId} name="groupId" required>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>{group.name}</option>
+                      ))}
+                    </select>
+                    <input className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.title} name="title" placeholder={t.titlePlaceholder} required />
+                    <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.responseMode} name="responseMode" required>
+                      {responseModes.map((mode) => (
+                        <option key={mode} value={mode}>{t.responseModes[mode]}</option>
+                      ))}
+                    </select>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <label className="grid gap-1 text-sm font-bold text-muted-foreground">
+                        <span>{t.maxAttachmentCount}</span>
+                        <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.maxAttachmentCount} name="maxAttachmentCount">
+                          {[1, 2, 3, 4, 5].map((count) => <option key={count} value={count}>{count}</option>)}
+                        </select>
+                      </label>
+                      <label className="grid gap-1 text-sm font-bold text-muted-foreground">
+                        <span>{t.audioMaxMinutes}</span>
+                        <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.audioMaxSeconds} name="audioMaxSeconds">
+                          {[60, 120, 180, 240, 300].map((seconds) => <option key={seconds} value={seconds}>{seconds / 60} daqiqa</option>)}
+                        </select>
+                      </label>
+                      <label className="grid gap-1 text-sm font-bold text-muted-foreground">
+                        <span>{t.videoMaxMinutes}</span>
+                        <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.videoMaxSeconds} name="videoMaxSeconds">
+                          {[30, 60, 90, 120, 180].map((seconds) => (
+                            <option key={seconds} value={seconds}>{seconds < 60 ? `${seconds} soniya` : `${seconds / 60} daqiqa`}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <textarea className="min-h-28 rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.description} name="description" placeholder={t.descriptionPlaceholder} required />
+                    <input className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={assignment.dueAt ? formatDateInput(assignment.dueAt) : ""} name="dueAt" type="datetime-local" />
+                    <textarea className="min-h-20 rounded-2xl border border-border bg-background px-4 py-3" defaultValue={rubric} name="rubric" placeholder={t.rubricPlaceholder} />
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="submit">{t.saveAssignment}</Button>
+                    </div>
+                  </form>
+                  <form action={deleteAssignmentAction} className="mt-3">
+                    <input name="assignmentId" type="hidden" value={assignment.id} />
+                    <Button type="submit" variant="secondary">{t.deleteAssignment}</Button>
+                  </form>
+                </details>
                 <div className="mt-4 rounded-2xl bg-muted p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="font-black">{t.completion}</p>
@@ -268,4 +321,26 @@ function formatUzDateTime(date: Date) {
     minute: "2-digit",
     timeZone: "Asia/Tashkent",
   }).format(date);
+}
+
+function formatUzDate(date: Date) {
+  return new Intl.DateTimeFormat("uz-Latn-UZ", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Tashkent",
+  }).format(date);
+}
+
+function formatDateInput(date: Date) {
+  const formatter = new Intl.DateTimeFormat("sv-SE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tashkent",
+  });
+
+  return formatter.format(date).replace(" ", "T");
 }

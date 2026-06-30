@@ -60,6 +60,9 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
             </select>
           </label>
         </div>
+        <p className="rounded-2xl bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+          {t.maxAttachmentCountHint}
+        </p>
         <textarea className="min-h-28 rounded-2xl border border-border bg-background px-4 py-3" name="description" placeholder={t.descriptionPlaceholder} required />
         <label className="grid gap-2 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-sm font-bold text-muted-foreground">
           <span>{t.sourceFile}</span>

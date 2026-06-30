@@ -46,3 +46,11 @@ export const gradeSubmissionSchema = z.object({
   grade: z.coerce.number().int().min(0).max(100),
   feedback: z.string().trim().max(2000).optional().or(z.literal("")),
 });
+
+export const updateAssignmentSchema = createAssignmentSchema.extend({
+  assignmentId: z.string().cuid("Topshiriq topilmadi"),
+});
+
+export const deleteAssignmentSchema = z.object({
+  assignmentId: z.string().cuid("Topshiriq topilmadi"),
+});

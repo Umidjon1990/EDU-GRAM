@@ -171,6 +171,9 @@ export function BulkAssignmentForm({
             </select>
           </label>
         </div>
+        <p className="rounded-2xl bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+          {t.maxAttachmentCountHint}
+        </p>
         <textarea
           className="min-h-24 rounded-2xl border border-border bg-background px-4 py-3"
           name="description"

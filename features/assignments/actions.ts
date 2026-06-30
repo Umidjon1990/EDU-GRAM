@@ -14,13 +14,15 @@ import { revalidatePath } from "next/cache";
 import {
   bulkCreateAssignmentsSchema,
   createAssignmentSchema,
+  deleteAssignmentSchema,
   gradeSubmissionSchema,
   submitAssignmentSchema,
+  updateAssignmentSchema,
 } from "@/features/assignments/assignment-schema";
 import { getAccessibleGroup } from "@/lib/auth/group-access";
 import { requirePermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
-import { storeUploadedFile } from "@/lib/storage/local-storage";
+import { deleteStoredFile, storeUploadedFile } from "@/lib/storage/local-storage";
 import { offloadAssignmentFileToTelegram } from "@/lib/telegram/assignment-offload";
 import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 import { notifyGroupMembers } from "@/lib/notifications/notify";
@@ -210,6 +212,137 @@ export async function bulkCreateAssignmentsAction(
     status: "success",
     message: t.bulkCreated.replace("{count}", String(parsed.data.items.length)),
   };
+}
+
+export async function updateAssignmentAction(formData: FormData) {
+  const user = await requirePermission("assignment:create:owned_group");
+  const parsed = updateAssignmentSchema.safeParse({
+    assignmentId: formData.get("assignmentId"),
+    groupId: formData.get("groupId"),
+    title: formData.get("title"),
+    description: formData.get("description"),
+    responseMode: formData.get("responseMode"),
+    dueAt: formData.get("dueAt"),
+    maxAttachmentCount: formData.get("maxAttachmentCount"),
+    audioMaxSeconds: formData.get("audioMaxSeconds"),
+    videoMaxSeconds: formData.get("videoMaxSeconds"),
+    rubric: formData.get("rubric"),
+  });
+
+  if (!parsed.success) return;
+
+  const group = await getAccessibleGroup({
+    groupId: parsed.data.groupId,
+    organizationId: user.organizationId,
+    userId: user.id,
+    role: user.role,
+  });
+
+  if (!group) return;
+
+  await prisma.assignment.updateMany({
+    where: {
+      id: parsed.data.assignmentId,
+      organizationId: user.organizationId,
+      teacherId: user.id,
+    },
+    data: {
+      groupId: group.id,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      section: getDefaultSection(parsed.data.responseMode),
+      responseMode: parsed.data.responseMode,
+      dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
+      maxAttachmentCount: parsed.data.maxAttachmentCount,
+      audioMaxSeconds: parsed.data.audioMaxSeconds,
+      videoMaxSeconds: parsed.data.videoMaxSeconds,
+      rubric: parsed.data.rubric ? { text: parsed.data.rubric } : undefined,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: AuditAction.ASSIGNMENT_CREATED,
+      metadata: {
+        assignmentId: parsed.data.assignmentId,
+        mode: "updated",
+      },
+    },
+  });
+
+  revalidatePath("/teacher/assignments");
+  revalidatePath("/student/assignments");
+}
+
+export async function deleteAssignmentAction(formData: FormData) {
+  const user = await requirePermission("assignment:create:owned_group");
+  const parsed = deleteAssignmentSchema.safeParse({
+    assignmentId: formData.get("assignmentId"),
+  });
+
+  if (!parsed.success) return;
+
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      id: parsed.data.assignmentId,
+      organizationId: user.organizationId,
+      teacherId: user.id,
+    },
+    select: {
+      id: true,
+      sourceFile: {
+        select: { id: true, storageKey: true, storageDeletedAt: true },
+      },
+      submissions: {
+        select: {
+          attachments: {
+            select: {
+              file: {
+                select: { id: true, storageKey: true, storageDeletedAt: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!assignment) return;
+
+  const files = [
+    assignment.sourceFile,
+    ...assignment.submissions.flatMap((submission) =>
+      submission.attachments.map((attachment) => attachment.file),
+    ),
+  ].filter((file): file is { id: string; storageKey: string; storageDeletedAt: Date | null } =>
+    Boolean(file),
+  );
+
+  await prisma.assignment.delete({ where: { id: assignment.id } });
+
+  for (const file of files) {
+    if (!file.storageDeletedAt) {
+      await deleteStoredFile(file.storageKey);
+    }
+    await prisma.fileAsset.deleteMany({ where: { id: file.id } });
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: AuditAction.ASSIGNMENT_CREATED,
+      metadata: {
+        assignmentId: assignment.id,
+        mode: "deleted",
+      },
+    },
+  });
+
+  revalidatePath("/teacher/assignments");
+  revalidatePath("/student/assignments");
 }
 
 function getDefaultSection(responseMode: AssignmentResponseMode) {

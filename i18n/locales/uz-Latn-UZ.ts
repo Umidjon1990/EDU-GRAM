@@ -393,6 +393,9 @@ export const assignmentDictionary = {
   sourceMedia: "Dars materiali",
   responseMode: "O'quvchi javobi",
   responseHint: "O'quvchi shu formatda javob yuboradi",
+  maxAttachmentCount: "Javob fayllari soni",
+  audioMaxMinutes: "Audio vaqti",
+  videoMaxMinutes: "Video vaqti",
   maxFileSize: "Har bir fayl 40 MB gacha",
   sourceFile: "Material fayli",
   telegramOffloaded: "Telegramga yuborildi, lokal xotira tozalandi",
@@ -414,6 +417,7 @@ export const assignmentDictionary = {
   rubric: "Rubrika",
   rubricPlaceholder: "Masalan: talaffuz 40, grammatika 30, yozma ish 30",
   fileAttachment: "Fayl ilova qilish",
+  removeAttachment: "Faylni olib tashlash",
   videoRecorder: {
     title: "Video javob yozish",
     description:
@@ -430,6 +434,14 @@ export const assignmentDictionary = {
     unsupported:
       "Bu brauzerda yuz nazorati cheklangan. Kamera sifati va vaqt limiti nazorat qilinadi.",
     compressed: "Video ixcham formatda tayyorlanadi",
+  },
+  audioRecorder: {
+    title: "Audio javob yozish",
+    description:
+      "Audio {seconds} soniyagacha yoziladi. Jami {count} ta bo'lak yuborish mumkin.",
+    start: "Audio yozish",
+    stop: "To'xtatish",
+    secondsLeft: "{seconds} soniya qoldi",
   },
   attachedFiles: "Ilova qilingan fayllar",
   late: "Kechikdi",
@@ -457,6 +469,7 @@ export const assignmentDictionary = {
   created: "Topshiriq yaratildi",
   submit: "Topshirish",
   submitting: "Topshirilmoqda...",
+  uploading: "Yuborilmoqda...",
   submitted: "Topshiriq yuborildi",
   answerPlaceholder: "Javobingizni yozing",
   submissions: "Javoblar",
@@ -471,6 +484,7 @@ export const assignmentDictionary = {
   errors: {
     invalidData: "Topshiriq ma'lumotlarini tekshiring",
     notAllowed: "Bu topshiriq uchun ruxsat yo'q",
+    tooManyFiles: "Ko'pi bilan {count} ta fayl yuborish mumkin",
   },
 } as const;
 

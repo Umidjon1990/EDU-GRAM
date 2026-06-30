@@ -8,6 +8,9 @@ import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 
 type VideoSubmissionRecorderProps = {
   onRecorded: (file: File) => void;
+  maxSeconds?: number;
+  recordedCount?: number;
+  maxCount?: number;
 };
 
 type FaceDetectorCtor = new (options?: {
@@ -18,9 +21,12 @@ type FaceDetectorCtor = new (options?: {
 };
 
 const t = assignmentDictionary.videoRecorder;
-const maxSeconds = 60;
-
-export function VideoSubmissionRecorder({ onRecorded }: VideoSubmissionRecorderProps) {
+export function VideoSubmissionRecorder({
+  maxCount = 1,
+  maxSeconds = 60,
+  onRecorded,
+  recordedCount = 0,
+}: VideoSubmissionRecorderProps) {
   const previewRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -46,9 +52,9 @@ export function VideoSubmissionRecorder({ onRecorded }: VideoSubmissionRecorderP
       audio: true,
       video: {
         facingMode: "user",
-        frameRate: { ideal: 24, max: 24 },
-        height: { ideal: 480, max: 720 },
-        width: { ideal: 480, max: 720 },
+        frameRate: { ideal: 18, max: 20 },
+        height: { ideal: 360, max: 480 },
+        width: { ideal: 360, max: 480 },
       },
     });
 
@@ -72,7 +78,7 @@ export function VideoSubmissionRecorder({ onRecorded }: VideoSubmissionRecorderP
     const recorder = new MediaRecorder(stream, {
       mimeType,
       audioBitsPerSecond: 64000,
-      videoBitsPerSecond: 650000,
+      videoBitsPerSecond: 420000,
     });
 
     mediaRecorderRef.current = recorder;
@@ -157,6 +163,7 @@ export function VideoSubmissionRecorder({ onRecorded }: VideoSubmissionRecorderP
   }
 
   const faceControlBlocksRecording = faceStatus === "missing" || faceStatus === "lookingAway";
+  const limitReached = recordedCount >= maxCount;
 
   return (
     <section className="grid gap-4 rounded-3xl border border-border bg-muted p-4">
@@ -164,6 +171,9 @@ export function VideoSubmissionRecorder({ onRecorded }: VideoSubmissionRecorderP
         <h3 className="font-black">{t.title}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{t.description}</p>
         <p className="mt-1 text-xs font-bold text-muted-foreground">{t.compressed}</p>
+        <p className="mt-1 text-xs font-bold text-muted-foreground">
+          {recordedCount}/{maxCount}
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-[12rem_1fr] sm:items-center">
@@ -196,7 +206,7 @@ export function VideoSubmissionRecorder({ onRecorded }: VideoSubmissionRecorderP
               </Button>
             ) : (
               <Button
-                disabled={!cameraReady || faceControlBlocksRecording}
+                disabled={!cameraReady || faceControlBlocksRecording || limitReached}
                 onClick={startRecording}
                 type="button"
               >

@@ -74,9 +74,13 @@ export default async function StudentAssignmentsPage() {
                     )
                   ) : null}
                   <div className="mt-3 flex flex-wrap gap-2 text-sm font-bold text-muted-foreground">
-                    <span className="rounded-full bg-muted px-3 py-1">
-                      {assignment.maxScore} {t.grade}
-                    </span>
+                    <span className="rounded-full bg-muted px-3 py-1">{t.maxAttachmentCount}: {assignment.maxAttachmentCount}</span>
+                    {assignment.responseMode === "AUDIO" ? (
+                      <span className="rounded-full bg-muted px-3 py-1">{t.audioMaxMinutes}: {Math.round(assignment.audioMaxSeconds / 60)}</span>
+                    ) : null}
+                    {assignment.responseMode === "VIDEO" ? (
+                      <span className="rounded-full bg-muted px-3 py-1">{t.videoMaxMinutes}: {formatSeconds(assignment.videoMaxSeconds)}</span>
+                    ) : null}
                     {assignment.dueAt ? (
                       <span className="rounded-full bg-muted px-3 py-1">
                         {t.dueAt}: {formatUzDateTime(assignment.dueAt)}
@@ -130,7 +134,13 @@ export default async function StudentAssignmentsPage() {
                     </div>
                   ) : null}
                   {!submission || submission.status === SubmissionStatus.REVISION_REQUESTED ? (
-                    <StudentSubmitForm assignmentId={assignment.id} responseMode={assignment.responseMode} />
+                    <StudentSubmitForm
+                      assignmentId={assignment.id}
+                      audioMaxSeconds={assignment.audioMaxSeconds}
+                      maxAttachmentCount={assignment.maxAttachmentCount}
+                      responseMode={assignment.responseMode}
+                      videoMaxSeconds={assignment.videoMaxSeconds}
+                    />
                   ) : null}
                 </article>
               );
@@ -140,6 +150,11 @@ export default async function StudentAssignmentsPage() {
       </div>
     </AppShell>
   );
+}
+
+function formatSeconds(seconds: number) {
+  if (seconds < 60) return `${seconds} soniya`;
+  return `${Math.round(seconds / 60)} daqiqa`;
 }
 
 function getRubricText(value: unknown) {

@@ -28,6 +28,38 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
             </option>
           ))}
         </select>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <label className="grid gap-1 text-sm font-bold text-muted-foreground">
+            <span>{t.maxAttachmentCount}</span>
+            <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue="1" name="maxAttachmentCount">
+              {[1, 2, 3, 4, 5].map((count) => (
+                <option key={count} value={count}>
+                  {count}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-bold text-muted-foreground">
+            <span>{t.audioMaxMinutes}</span>
+            <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue="180" name="audioMaxSeconds">
+              {[60, 120, 180, 240, 300].map((seconds) => (
+                <option key={seconds} value={seconds}>
+                  {seconds / 60} daqiqa
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-bold text-muted-foreground">
+            <span>{t.videoMaxMinutes}</span>
+            <select className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue="60" name="videoMaxSeconds">
+              {[30, 60, 90, 120, 180].map((seconds) => (
+                <option key={seconds} value={seconds}>
+                  {seconds < 60 ? `${seconds} soniya` : `${seconds / 60} daqiqa`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <textarea className="min-h-28 rounded-2xl border border-border bg-background px-4 py-3" name="description" placeholder={t.descriptionPlaceholder} required />
         <label className="grid gap-2 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-sm font-bold text-muted-foreground">
           <span>{t.sourceFile}</span>

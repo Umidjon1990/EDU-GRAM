@@ -7,6 +7,9 @@ export const createAssignmentSchema = z.object({
   description: z.string().trim().min(3, "Topshiriq matnini kiriting").max(5000),
   responseMode: z.nativeEnum(AssignmentResponseMode),
   dueAt: z.string().optional(),
+  maxAttachmentCount: z.coerce.number().int().min(1).max(5).default(1),
+  audioMaxSeconds: z.coerce.number().int().min(30).max(600).default(180),
+  videoMaxSeconds: z.coerce.number().int().min(15).max(180).default(60),
   rubric: z.string().trim().max(2000, "Rubrika juda uzun").optional().or(z.literal("")),
 });
 
@@ -14,6 +17,9 @@ export const bulkCreateAssignmentsSchema = z.object({
   groupId: z.string().cuid("Guruh topilmadi"),
   description: z.string().trim().max(5000).optional().or(z.literal("")),
   dueAt: z.string().optional(),
+  maxAttachmentCount: z.coerce.number().int().min(1).max(5).default(1),
+  audioMaxSeconds: z.coerce.number().int().min(30).max(600).default(180),
+  videoMaxSeconds: z.coerce.number().int().min(15).max(180).default(60),
   rubric: z.string().trim().max(2000, "Rubrika juda uzun").optional().or(z.literal("")),
   items: z
     .array(

@@ -228,6 +228,9 @@ model Assignment {
   responseMode   AssignmentResponseMode @default(TEXT)
   sourceFileId   String?
   dueAt          DateTime?
+  maxAttachmentCount Int              @default(1)
+  audioMaxSeconds Int                 @default(180)
+  videoMaxSeconds Int                 @default(60)
   maxScore       Int              @default(100)
   rubric         Json?
   status         AssignmentStatus @default(PUBLISHED)

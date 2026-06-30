@@ -44,6 +44,9 @@ export async function createAssignmentAction(
     description: formData.get("description"),
     responseMode: formData.get("responseMode"),
     dueAt: formData.get("dueAt"),
+    maxAttachmentCount: formData.get("maxAttachmentCount"),
+    audioMaxSeconds: formData.get("audioMaxSeconds"),
+    videoMaxSeconds: formData.get("videoMaxSeconds"),
     rubric: formData.get("rubric"),
   });
   if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message ?? t.errors.invalidData };
@@ -85,6 +88,9 @@ export async function createAssignmentAction(
         responseMode: parsed.data.responseMode,
         sourceFileId: sourceFileAsset?.id,
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
+        maxAttachmentCount: parsed.data.maxAttachmentCount,
+        audioMaxSeconds: parsed.data.audioMaxSeconds,
+        videoMaxSeconds: parsed.data.videoMaxSeconds,
         maxScore: 100,
         rubric: parsed.data.rubric ? { text: parsed.data.rubric } : undefined,
       },
@@ -129,6 +135,9 @@ export async function bulkCreateAssignmentsAction(
     groupId: formData.get("groupId"),
     description: formData.get("description"),
     dueAt: formData.get("dueAt"),
+    maxAttachmentCount: formData.get("maxAttachmentCount"),
+    audioMaxSeconds: formData.get("audioMaxSeconds"),
+    videoMaxSeconds: formData.get("videoMaxSeconds"),
     rubric: formData.get("rubric"),
     items,
   });
@@ -160,6 +169,9 @@ export async function bulkCreateAssignmentsAction(
         section: getDefaultSection(item.responseMode),
         responseMode: item.responseMode,
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
+        maxAttachmentCount: parsed.data.maxAttachmentCount,
+        audioMaxSeconds: parsed.data.audioMaxSeconds,
+        videoMaxSeconds: parsed.data.videoMaxSeconds,
         maxScore: 100,
         rubric: parsed.data.rubric ? { text: parsed.data.rubric } : undefined,
       })),
@@ -219,12 +231,13 @@ export async function submitAssignmentAction(
   formData: FormData,
 ): Promise<AssignmentState> {
   const user = await requirePermission("assignment:submit:assigned");
-  const attachment = formData.get("attachment");
-  const file = attachment instanceof File && attachment.size > 0 ? attachment : null;
+  const files = formData
+    .getAll("attachments")
+    .filter((attachment): attachment is File => attachment instanceof File && attachment.size > 0);
   const parsed = submitAssignmentSchema.safeParse({
     assignmentId: formData.get("assignmentId"),
     body: formData.get("body"),
-    hasAttachment: Boolean(file),
+    hasAttachment: files.length > 0,
   });
   if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message ?? t.errors.invalidData };
 
@@ -240,6 +253,7 @@ export async function submitAssignmentAction(
       groupId: true,
       title: true,
       responseMode: true,
+      maxAttachmentCount: true,
       group: {
         select: {
           name: true,
@@ -252,23 +266,36 @@ export async function submitAssignmentAction(
   });
   if (!assignment) return { status: "error", message: t.errors.notAllowed };
 
-  if (assignment.responseMode !== AssignmentResponseMode.TEXT && !file) {
+  if (assignment.responseMode !== AssignmentResponseMode.TEXT && files.length === 0) {
     return { status: "error", message: t.errors.invalidData };
   }
 
-  let storedFile = null;
+  if (files.length > assignment.maxAttachmentCount) {
+    return {
+      status: "error",
+      message: t.errors.tooManyFiles.replace("{count}", String(assignment.maxAttachmentCount)),
+    };
+  }
+
+  let storedFiles = [];
 
   try {
-    storedFile = file ? await storeUploadedFile(file) : null;
+    storedFiles = await Promise.all(files.map((file) => storeUploadedFile(file)));
   } catch {
     return { status: "error", message: t.errors.invalidData };
   }
 
-  if (storedFile && !isExpectedSubmissionKind(assignment.responseMode, storedFile.kind)) {
+  const validStoredFiles = storedFiles.filter((file) => file !== null);
+
+  if (
+    validStoredFiles.some(
+      (storedFile) => !isExpectedSubmissionKind(assignment.responseMode, storedFile.kind),
+    )
+  ) {
     return { status: "error", message: t.errors.invalidData };
   }
 
-  let createdFileId: string | null = null;
+  const createdFileIds: string[] = [];
 
   await prisma.$transaction(async (tx) => {
     const submission = await tx.assignmentSubmission.upsert({
@@ -284,7 +311,7 @@ export async function submitAssignmentAction(
       select: { id: true },
     });
 
-    if (storedFile) {
+    for (const storedFile of validStoredFiles) {
       const fileAsset = await tx.fileAsset.create({
         data: {
           organizationId: user.organizationId,
@@ -297,7 +324,7 @@ export async function submitAssignmentAction(
         },
         select: { id: true },
       });
-      createdFileId = fileAsset.id;
+      createdFileIds.push(fileAsset.id);
 
       await tx.assignmentSubmissionAttachment.create({
         data: {
@@ -312,13 +339,15 @@ export async function submitAssignmentAction(
     data: { organizationId: user.organizationId, userId: user.id, action: AuditAction.ASSIGNMENT_SUBMITTED, metadata: { assignmentId: assignment.id } },
   });
 
-  if (createdFileId && assignment.group.telegramEnabled) {
-    await offloadAssignmentFileToTelegram({
-      fileId: createdFileId,
-      telegramBotToken: assignment.group.telegramBotToken,
-      telegramChatId: assignment.group.telegramChatId,
-      caption: `${assignment.group.name}\n${assignment.title}\n${user.fullName}`,
-    });
+  if (createdFileIds.length > 0 && assignment.group.telegramEnabled) {
+    for (const [index, fileId] of createdFileIds.entries()) {
+      await offloadAssignmentFileToTelegram({
+        fileId,
+        telegramBotToken: assignment.group.telegramBotToken,
+        telegramChatId: assignment.group.telegramChatId,
+        caption: `${assignment.group.name}\n${assignment.title}\n${user.fullName}\n${index + 1}/${createdFileIds.length}`,
+      });
+    }
   }
   revalidatePath("/student/assignments");
   revalidatePath("/teacher/assignments");

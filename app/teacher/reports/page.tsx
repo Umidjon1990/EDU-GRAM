@@ -12,18 +12,38 @@ export const metadata = { title: t.metaTitle };
 
 export default async function TeacherReportsPage() {
   const user = await requirePermission("report:read:owned_group");
+  const todayStart = getTashkentDayStart();
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
   const groups = await prisma.group.findMany({
     where: { organizationId: user.organizationId, teacherId: user.id },
     select: { id: true },
   });
   const groupIds = groups.map((group) => group.id);
-  const [activeGroups, messages, assignments, submissions, tests, attempts, recentActivity] = await Promise.all([
+  const [
+    activeGroups,
+    messages,
+    assignments,
+    submissions,
+    tests,
+    attempts,
+    todayMessages,
+    weeklySubmissions,
+    averageAttempt,
+    recentActivity,
+  ] = await Promise.all([
     prisma.group.count({ where: { id: { in: groupIds }, status: GroupStatus.ACTIVE } }),
     prisma.message.count({ where: { groupId: { in: groupIds }, organizationId: user.organizationId } }),
     prisma.assignment.count({ where: { groupId: { in: groupIds }, organizationId: user.organizationId } }),
     prisma.assignmentSubmission.count({ where: { assignment: { groupId: { in: groupIds } } } }),
     prisma.test.count({ where: { groupId: { in: groupIds }, organizationId: user.organizationId } }),
     prisma.testAttempt.count({ where: { test: { groupId: { in: groupIds } } } }),
+    prisma.message.count({ where: { groupId: { in: groupIds }, organizationId: user.organizationId, createdAt: { gte: todayStart } } }),
+    prisma.assignmentSubmission.count({ where: { assignment: { groupId: { in: groupIds } }, submittedAt: { gte: weekStart } } }),
+    prisma.testAttempt.aggregate({
+      where: { test: { groupId: { in: groupIds } } },
+      _avg: { score: true },
+    }),
     prisma.auditLog.findMany({
       where: { organizationId: user.organizationId, userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -47,6 +67,9 @@ export default async function TeacherReportsPage() {
           <StatCard label={t.submissions} value={submissions} />
           <StatCard label={t.tests} value={tests} />
           <StatCard label={t.attempts} value={attempts} />
+          <StatCard label={t.todayMessages} value={todayMessages} />
+          <StatCard label={t.weeklySubmissions} value={weeklySubmissions} />
+          <StatCard label={t.averageScore} value={Math.round(averageAttempt._avg.score ?? 0)} />
         </section>
         <section className="rounded-3xl border border-border bg-card p-5 shadow-sm">
           <h2 className="text-2xl font-black">{t.recentActivity}</h2>
@@ -65,4 +88,16 @@ export default async function TeacherReportsPage() {
       </div>
     </AppShell>
   );
+}
+
+function getTashkentDayStart() {
+  const now = new Date();
+  const tashkentDate = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Tashkent",
+    year: "numeric",
+  }).format(now);
+
+  return new Date(`${tashkentDate}T00:00:00+05:00`);
 }

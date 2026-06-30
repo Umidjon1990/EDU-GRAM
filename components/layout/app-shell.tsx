@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getNavigationItems } from "@/config/navigation";
 import { dashboardDictionary } from "@/i18n/locales/uz-Latn-UZ";
+import { getCurrentUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
 
 type AppShellProps = {
   children: ReactNode;
@@ -21,8 +23,18 @@ const roleLabels: Record<UserRole, string> = {
   STUDENT: dashboardDictionary.roles.student,
 };
 
-export function AppShell({ children, fullName, role }: AppShellProps) {
+export async function AppShell({ children, fullName, role }: AppShellProps) {
   const navigationItems = getNavigationItems(role);
+  const currentUser = await getCurrentUser();
+  const unreadNotifications = currentUser
+    ? await prisma.notification.count({
+        where: {
+          organizationId: currentUser.organizationId,
+          userId: currentUser.id,
+          readAt: null,
+        },
+      })
+    : 0;
 
   return (
     <main className="min-h-screen bg-background">
@@ -62,6 +74,11 @@ export function AppShell({ children, fullName, role }: AppShellProps) {
             >
               <item.icon aria-hidden className="size-4" />
               {item.label}
+              {item.href === "/notifications" && unreadNotifications > 0 ? (
+                <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-black text-white">
+                  {unreadNotifications}
+                </span>
+              ) : null}
             </Link>
           ))}
         </nav>

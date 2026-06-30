@@ -12,6 +12,9 @@ export const metadata = { title: t.metaTitle };
 
 export default async function AdminReportsPage() {
   const user = await requirePermission("report:read:organization");
+  const todayStart = getTashkentDayStart();
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
   const [
     teachers,
     students,
@@ -22,6 +25,9 @@ export default async function AdminReportsPage() {
     tests,
     attempts,
     notifications,
+    todayMessages,
+    weeklySubmissions,
+    averageAttempt,
     recentActivity,
   ] = await Promise.all([
     prisma.user.count({ where: { organizationId: user.organizationId, role: UserRole.TEACHER } }),
@@ -33,6 +39,12 @@ export default async function AdminReportsPage() {
     prisma.test.count({ where: { organizationId: user.organizationId } }),
     prisma.testAttempt.count({ where: { test: { organizationId: user.organizationId } } }),
     prisma.notification.count({ where: { organizationId: user.organizationId } }),
+    prisma.message.count({ where: { organizationId: user.organizationId, createdAt: { gte: todayStart } } }),
+    prisma.assignmentSubmission.count({ where: { assignment: { organizationId: user.organizationId }, submittedAt: { gte: weekStart } } }),
+    prisma.testAttempt.aggregate({
+      where: { test: { organizationId: user.organizationId } },
+      _avg: { score: true },
+    }),
     prisma.auditLog.findMany({
       where: { organizationId: user.organizationId },
       orderBy: { createdAt: "desc" },
@@ -59,6 +71,9 @@ export default async function AdminReportsPage() {
           <StatCard label={t.tests} value={tests} />
           <StatCard label={t.attempts} value={attempts} />
           <StatCard label={t.notifications} value={notifications} />
+          <StatCard label={t.todayMessages} value={todayMessages} />
+          <StatCard label={t.weeklySubmissions} value={weeklySubmissions} />
+          <StatCard label={t.averageScore} value={Math.round(averageAttempt._avg.score ?? 0)} />
         </section>
         <section className="rounded-3xl border border-border bg-card p-5 shadow-sm">
           <h2 className="text-2xl font-black">{t.recentActivity}</h2>
@@ -77,4 +92,16 @@ export default async function AdminReportsPage() {
       </div>
     </AppShell>
   );
+}
+
+function getTashkentDayStart() {
+  const now = new Date();
+  const tashkentDate = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Tashkent",
+    year: "numeric",
+  }).format(now);
+
+  return new Date(`${tashkentDate}T00:00:00+05:00`);
 }

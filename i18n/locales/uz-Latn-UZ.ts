@@ -448,6 +448,10 @@ export const reportDictionary = {
   attempts: "Test natijalari",
   notifications: "Bildirishnomalar",
   activeGroups: "Faol guruhlar",
+  todayMessages: "Bugungi xabarlar",
+  weeklySubmissions: "Haftalik javoblar",
+  averageScore: "O'rtacha test natijasi",
+  completionRate: "Topshiriq bajarilishi",
   recentActivity: "So'nggi faollik",
   noActivity: "Hali faollik yo'q.",
   auditActions: {

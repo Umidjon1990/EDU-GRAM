@@ -1,6 +1,13 @@
 "use server";
 
-import { AssignmentStatus, AuditAction, FileAssetKind, UserRole, MessageType } from "@prisma/client";
+import {
+  AssignmentStatus,
+  AuditAction,
+  FileAssetKind,
+  NotificationKind,
+  UserRole,
+  MessageType,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import {
@@ -15,6 +22,7 @@ import { requirePermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { storeUploadedFile } from "@/lib/storage/local-storage";
 import { chatDictionary } from "@/i18n/locales/uz-Latn-UZ";
+import { notifyGroupMembers } from "@/lib/notifications/notify";
 
 export type MessageActionState = {
   status: "idle" | "success" | "error";
@@ -90,32 +98,45 @@ export async function createMessageAction(
     replyToId = replyTo?.id;
   }
 
-  await prisma.message.create({
-    data: {
-      organizationId: currentUser.organizationId,
-      groupId: group.id,
-      senderId: currentUser.id,
-      replyToId,
-      type: messageType,
-      body: parsed.data.body?.trim() || getFallbackBody(messageType),
-      attachments: storedFile
-        ? {
-            create: {
-              file: {
-                create: {
-                  organizationId: currentUser.organizationId,
-                  ownerId: currentUser.id,
-                  kind: storedFile.kind,
-                  storageKey: storedFile.storageKey,
-                  originalName: storedFile.originalName,
-                  mimeType: storedFile.mimeType,
-                  size: storedFile.size,
+  await prisma.$transaction(async (tx) => {
+    await tx.message.create({
+      data: {
+        organizationId: currentUser.organizationId,
+        groupId: group.id,
+        senderId: currentUser.id,
+        replyToId,
+        type: messageType,
+        body: parsed.data.body?.trim() || getFallbackBody(messageType),
+        attachments: storedFile
+          ? {
+              create: {
+                file: {
+                  create: {
+                    organizationId: currentUser.organizationId,
+                    ownerId: currentUser.id,
+                    kind: storedFile.kind,
+                    storageKey: storedFile.storageKey,
+                    originalName: storedFile.originalName,
+                    mimeType: storedFile.mimeType,
+                    size: storedFile.size,
+                  },
                 },
               },
-            },
-          }
-        : undefined,
-    },
+            }
+          : undefined,
+      },
+    });
+
+    await notifyGroupMembers({
+      tx,
+      organizationId: currentUser.organizationId,
+      groupId: group.id,
+      actorId: currentUser.id,
+      kind: NotificationKind.MESSAGE,
+      title: group.name,
+      body: parsed.data.body?.trim() || getFallbackBody(messageType),
+      href: `/student/groups/${group.id}`,
+    });
   });
 
   revalidatePath(`/teacher/groups/${group.id}`);

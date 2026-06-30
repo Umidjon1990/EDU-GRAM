@@ -1,4 +1,4 @@
-import { AssignmentStatus, GroupMemberRole } from "@prisma/client";
+import { AssignmentStatus, GroupMemberRole, SubmissionStatus } from "@prisma/client";
 
 import { StudentSubmitForm } from "@/components/assignments/student-submit-form";
 import { AppShell } from "@/components/layout/app-shell";
@@ -21,7 +21,17 @@ export default async function StudentAssignmentsPage() {
     orderBy: { createdAt: "desc" },
     include: {
       group: { select: { name: true } },
-      submissions: { where: { studentId: user.id }, take: 1 },
+      submissions: {
+        where: { studentId: user.id },
+        take: 1,
+        include: {
+          attachments: {
+            include: {
+              file: { select: { id: true, originalName: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -41,13 +51,59 @@ export default async function StudentAssignmentsPage() {
                   <p className="text-sm font-bold text-primary">{assignment.group.name}</p>
                   <h2 className="mt-1 text-2xl font-black">{assignment.title}</h2>
                   <p className="mt-3 whitespace-pre-wrap text-muted-foreground">{assignment.description}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-sm font-bold text-muted-foreground">
+                    <span className="rounded-full bg-muted px-3 py-1">
+                      {assignment.maxScore} {t.grade}
+                    </span>
+                    {assignment.dueAt ? (
+                      <span className="rounded-full bg-muted px-3 py-1">
+                        {t.dueAt}: {formatUzDateTime(assignment.dueAt)}
+                      </span>
+                    ) : null}
+                  </div>
+                  {getRubricText(assignment.rubric) ? (
+                    <div className="mt-3 rounded-2xl bg-muted p-3 text-sm">
+                      <p className="font-black">{t.rubric}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                        {getRubricText(assignment.rubric)}
+                      </p>
+                    </div>
+                  ) : null}
                   {submission ? (
                     <div className="mt-4 rounded-2xl bg-muted p-4">
-                      <p className="font-bold">{submission.grade === null ? t.statusSubmitted : t.statusGraded}</p>
+                      <p className="font-bold">
+                        {submission.status === SubmissionStatus.REVISION_REQUESTED
+                          ? t.statusRevision
+                          : submission.grade === null
+                            ? t.statusSubmitted
+                            : t.statusGraded}
+                      </p>
+                      {assignment.dueAt ? (
+                        <p className={
+                          submission.submittedAt > assignment.dueAt
+                            ? "mt-1 text-sm font-bold text-danger"
+                            : "mt-1 text-sm font-bold text-success"
+                        }>
+                          {submission.submittedAt > assignment.dueAt ? t.late : t.onTime}
+                        </p>
+                      ) : null}
                       {submission.grade !== null ? <p className="mt-1">{t.grade}: {submission.grade}</p> : null}
                       {submission.feedback ? <p className="mt-1 text-sm text-muted-foreground">{submission.feedback}</p> : null}
+                      {submission.attachments.length > 0 ? (
+                        <div className="mt-3 grid gap-2">
+                          <p className="text-sm font-black">{t.attachedFiles}</p>
+                          {submission.attachments.map((attachment) => (
+                            <a className="rounded-2xl bg-background px-3 py-2 text-sm font-bold text-primary" href={`/api/files/${attachment.file.id}`} key={attachment.id}>
+                              {attachment.file.originalName}
+                            </a>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                  ) : <StudentSubmitForm assignmentId={assignment.id} />}
+                  ) : null}
+                  {!submission || submission.status === SubmissionStatus.REVISION_REQUESTED ? (
+                    <StudentSubmitForm assignmentId={assignment.id} />
+                  ) : null}
                 </article>
               );
             })}
@@ -56,4 +112,24 @@ export default async function StudentAssignmentsPage() {
       </div>
     </AppShell>
   );
+}
+
+function getRubricText(value: unknown) {
+  if (!value || typeof value !== "object" || !("text" in value)) {
+    return "";
+  }
+
+  const text = (value as { text?: unknown }).text;
+  return typeof text === "string" ? text : "";
+}
+
+function formatUzDateTime(date: Date) {
+  return new Intl.DateTimeFormat("uz-Latn-UZ", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tashkent",
+  }).format(date);
 }

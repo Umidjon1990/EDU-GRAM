@@ -5,11 +5,17 @@ export const createAssignmentSchema = z.object({
   title: z.string().trim().min(2, "Topshiriq nomini kiriting").max(160),
   description: z.string().trim().min(3, "Topshiriq matnini kiriting").max(5000),
   dueAt: z.string().optional(),
+  maxScore: z.coerce.number().int().min(1, "Ball kamida 1 bo'lishi kerak").max(1000),
+  rubric: z.string().trim().max(2000, "Rubrika juda uzun").optional().or(z.literal("")),
 });
 
 export const submitAssignmentSchema = z.object({
   assignmentId: z.string().cuid("Topshiriq topilmadi"),
-  body: z.string().trim().min(2, "Javob matnini kiriting").max(5000),
+  body: z.string().trim().max(5000),
+  hasAttachment: z.boolean(),
+}).refine((value) => value.hasAttachment || value.body.length >= 2, {
+  message: "Javob matnini kiriting yoki fayl tanlang",
+  path: ["body"],
 });
 
 export const gradeSubmissionSchema = z.object({

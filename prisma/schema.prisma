@@ -50,6 +50,7 @@ enum AssignmentStatus {
 enum SubmissionStatus {
   SUBMITTED
   GRADED
+  REVISION_REQUESTED
 }
 
 enum TestStatus {
@@ -187,6 +188,8 @@ model Assignment {
   title          String
   description    String
   dueAt          DateTime?
+  maxScore       Int              @default(100)
+  rubric         Json?
   status         AssignmentStatus @default(PUBLISHED)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -208,14 +211,29 @@ model AssignmentSubmission {
   status       SubmissionStatus @default(SUBMITTED)
   grade        Int?
   feedback     String?
+  submittedAt  DateTime         @default(now())
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attachments AssignmentSubmissionAttachment[]
 
   @@unique([assignmentId, studentId])
   @@index([studentId, createdAt])
+}
+
+model AssignmentSubmissionAttachment {
+  id           String   @id @default(cuid())
+  submissionId String
+  fileId       String
+  createdAt    DateTime @default(now())
+
+  submission AssignmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  file       FileAsset            @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, fileId])
+  @@index([fileId])
 }
 
 model Test {
@@ -409,6 +427,7 @@ model FileAsset {
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   owner        User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   attachments  MessageAttachment[]
+  assignmentSubmissionAttachments AssignmentSubmissionAttachment[]
 
   @@index([organizationId, ownerId])
   @@index([organizationId, createdAt])

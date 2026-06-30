@@ -22,6 +22,13 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
         <input className="rounded-2xl border border-border bg-background px-4 py-3" name="title" placeholder={t.titlePlaceholder} required />
         <textarea className="min-h-28 rounded-2xl border border-border bg-background px-4 py-3" name="description" placeholder={t.descriptionPlaceholder} required />
         <input className="rounded-2xl border border-border bg-background px-4 py-3" name="dueAt" type="datetime-local" />
+        <input className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={100} min={1} name="maxScore" placeholder={t.maxScore} type="number" />
+        <textarea className="min-h-24 rounded-2xl border border-border bg-background px-4 py-3" name="rubric" placeholder={t.rubricPlaceholder} />
+        <div className="grid gap-2 rounded-2xl bg-muted p-3 text-sm">
+          <p className="font-black">{t.templates}</p>
+          <p>{t.pronunciationTemplate}: talaffuz 50, ravonlik 30, ishtirok 20</p>
+          <p>{t.writingTemplate}: mazmun 40, grammatika 40, tartib 20</p>
+        </div>
         <Button disabled={isPending} type="submit">{isPending ? t.creating : t.create}</Button>
       </form>
     </section>

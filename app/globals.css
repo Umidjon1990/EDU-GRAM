@@ -3,37 +3,51 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f7f8f5;
-  --foreground: #18201d;
+  --background: #f6f8f4;
+  --foreground: #121a17;
   --card: #ffffff;
-  --card-foreground: #18201d;
-  --muted: #eef1eb;
-  --muted-foreground: #66736c;
-  --border: #dfe5dc;
-  --primary: #0f766e;
+  --card-foreground: #121a17;
+  --muted: #eef3ed;
+  --muted-foreground: #607069;
+  --border: #dbe4dc;
+  --primary: #0b8278;
   --primary-foreground: #ffffff;
-  --accent: #d9a441;
+  --accent: #d8a43f;
   --accent-foreground: #1f1a10;
   --success: #2f8f58;
   --danger: #b42318;
-  --ring: #0f766e;
+  --ring: #0b8278;
+  --sky: #2f80ed;
+  --rose: #d94868;
+  --surface-glass: color-mix(in srgb, var(--card) 82%, transparent);
+  --surface-raised: color-mix(in srgb, var(--card) 94%, var(--background));
+  --shadow-soft: 0 24px 70px rgb(29 53 46 / 12%);
+  --shadow-float: 0 18px 45px rgb(11 130 120 / 18%);
+  --shadow-inner: inset 0 1px 0 rgb(255 255 255 / 72%);
 }
 
 .dark {
-  --background: #101713;
+  --background: #0f1714;
   --foreground: #f4f7f2;
-  --card: #16211b;
+  --card: #16231d;
   --card-foreground: #f4f7f2;
-  --muted: #1d2a23;
+  --muted: #1f2e27;
   --muted-foreground: #a7b2aa;
-  --border: #2c3a32;
-  --primary: #34d399;
+  --border: #304039;
+  --primary: #32d0b3;
   --primary-foreground: #09251c;
   --accent: #f2c15f;
   --accent-foreground: #1f1a10;
   --success: #66d18f;
   --danger: #ff8a7a;
-  --ring: #34d399;
+  --ring: #32d0b3;
+  --sky: #63a8ff;
+  --rose: #ff7c98;
+  --surface-glass: color-mix(in srgb, var(--card) 76%, transparent);
+  --surface-raised: color-mix(in srgb, var(--card) 88%, var(--background));
+  --shadow-soft: 0 28px 80px rgb(0 0 0 / 34%);
+  --shadow-float: 0 22px 55px rgb(50 208 179 / 14%);
+  --shadow-inner: inset 0 1px 0 rgb(255 255 255 / 8%);
 }
 
 @theme inline {
@@ -67,11 +81,26 @@ body {
   min-height: 100%;
   margin: 0;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--primary) 18%, transparent), transparent 32rem),
-    linear-gradient(180deg, color-mix(in srgb, var(--background) 94%, white), var(--background));
+    linear-gradient(115deg, color-mix(in srgb, var(--primary) 12%, transparent), transparent 26rem),
+    linear-gradient(245deg, color-mix(in srgb, var(--accent) 13%, transparent), transparent 30rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 88%, white), var(--background));
   color: var(--foreground);
   font-family: var(--font-inter), Arial, sans-serif;
   letter-spacing: 0;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, rgb(0 0 0 / 70%), transparent 76%);
+  opacity: 0.28;
 }
 
 ::selection {
@@ -95,6 +124,77 @@ input {
 
 .focus-ring:focus-visible {
   outline-color: var(--ring);
+}
+
+.surface-glass {
+  background: var(--surface-glass);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, white 22%);
+  box-shadow: var(--shadow-soft), var(--shadow-inner);
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+.surface-raised {
+  background: var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--border) 86%, white 14%);
+  box-shadow: var(--shadow-soft), var(--shadow-inner);
+}
+
+.interactive-lift {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.interactive-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-float), var(--shadow-inner);
+}
+
+.premium-scrollbar {
+  scrollbar-color: color-mix(in srgb, var(--primary) 45%, var(--border)) transparent;
+  scrollbar-width: thin;
+}
+
+.premium-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 42%, var(--border));
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.chat-stage {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 74%, transparent), transparent),
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary) 5%, transparent) 0 1px,
+      transparent 1px 22px
+    );
+}
+
+.message-own {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 88%, #0a4f48), var(--primary)),
+    var(--primary);
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+.message-other {
+  background: color-mix(in srgb, var(--card) 88%, var(--muted));
+  box-shadow: 0 16px 40px rgb(20 31 27 / 9%), var(--shadow-inner);
+}
+
+.composer-glow {
+  box-shadow:
+    0 -18px 60px color-mix(in srgb, var(--background) 74%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 60%);
 }
 
 @keyframes voice-wave {

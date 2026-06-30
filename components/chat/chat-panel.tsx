@@ -349,24 +349,28 @@ export function ChatPanel({
     <section
       className={
         isFullscreen
-          ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-card"
-          : "flex min-h-[42rem] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm lg:h-[calc(100dvh-11rem)]"
+          ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-background"
+          : "surface-glass flex min-h-[44rem] flex-col overflow-hidden rounded-[2rem] lg:h-[calc(100dvh-10rem)]"
       }
     >
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
+      <div className="relative flex shrink-0 items-center justify-between gap-4 border-b border-border/80 px-4 py-4 sm:px-5">
+        <div className="absolute inset-x-5 bottom-0 h-px bg-[linear-gradient(90deg,transparent,var(--primary),transparent)] opacity-50" />
         <div>
-          <h2 className="text-xl font-black sm:text-2xl">{t.title}</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-black sm:text-2xl">{t.title}</h2>
+            <span className="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs font-black text-success">
+              <span className="size-2 rounded-full bg-success shadow-[0_0_16px_var(--success)]" />
+              {t.live}
+            </span>
+          </div>
           <p className="mt-1 text-sm font-semibold text-muted-foreground">
             {t.streamStatus[streamStatus]}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-bold text-success">
-            {t.live}
-          </span>
           <button
             aria-label={isFullscreen ? t.exitFullscreen : t.enterFullscreen}
-            className="grid size-10 place-items-center rounded-2xl border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="interactive-lift grid size-11 place-items-center rounded-2xl border border-border bg-card/80 text-muted-foreground shadow-sm backdrop-blur transition hover:bg-muted hover:text-foreground"
             onClick={() => setIsFullscreen((current) => !current)}
             type="button"
           >
@@ -379,7 +383,7 @@ export function ChatPanel({
         </div>
       </div>
 
-      <div className="grid shrink-0 gap-3 border-b border-border bg-card px-3 py-3 md:grid-cols-[1fr_auto] sm:px-4">
+      <div className="grid shrink-0 gap-3 border-b border-border/80 bg-card/70 px-3 py-3 backdrop-blur md:grid-cols-[1fr_auto] sm:px-4">
         <label className="relative block">
           <span className="sr-only">{t.searchPlaceholder}</span>
           <Search
@@ -387,18 +391,18 @@ export function ChatPanel({
             className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           />
           <input
-            className="h-12 w-full rounded-2xl border border-border bg-background pl-11 pr-4 text-sm font-semibold outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="h-12 w-full rounded-2xl border border-border bg-background/82 pl-11 pr-4 text-sm font-semibold shadow-inner outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t.searchPlaceholder}
             value={query}
           />
         </label>
-        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/80 p-1 shadow-inner">
           <button
             className={
               viewMode === "all"
                 ? "rounded-xl bg-card px-3 py-2 text-sm font-black shadow-sm"
-                : "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground"
+                : "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground transition hover:text-foreground"
             }
             onClick={() => setViewMode("all")}
             type="button"
@@ -409,7 +413,7 @@ export function ChatPanel({
             className={
               viewMode === "media"
                 ? "rounded-xl bg-card px-3 py-2 text-sm font-black shadow-sm"
-                : "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground"
+                : "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground transition hover:text-foreground"
             }
             onClick={() => setViewMode("media")}
             type="button"
@@ -419,7 +423,7 @@ export function ChatPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5">
+      <div className="chat-stage premium-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5 lg:px-7">
         {unreadCount > 0 ? (
           <div className="sticky top-0 z-10 mb-3 flex justify-center">
             <span className="rounded-full bg-primary px-4 py-2 text-sm font-black text-primary-foreground shadow-sm">
@@ -428,15 +432,15 @@ export function ChatPanel({
           </div>
         ) : null}
         {messages.length === 0 ? (
-          <p className="rounded-2xl bg-muted px-4 py-5 text-muted-foreground">
+          <p className="surface-raised rounded-2xl px-4 py-5 text-muted-foreground">
             {t.empty}
           </p>
         ) : filteredMessages.length === 0 ? (
-          <p className="rounded-2xl bg-muted px-4 py-5 text-muted-foreground">
+          <p className="surface-raised rounded-2xl px-4 py-5 text-muted-foreground">
             {t.noSearchResults}
           </p>
         ) : (
-          <div className="grid gap-3 pb-2">
+          <div className="grid gap-4 pb-3">
             {filteredMessages.map((message) => {
               const own = message.sender.id === currentUserId;
               const canDelete = own || canPin;
@@ -447,8 +451,8 @@ export function ChatPanel({
                 <article
                   className={
                     own
-                      ? "group/message ml-auto max-w-[92%] rounded-3xl bg-primary px-4 py-3 text-primary-foreground sm:max-w-[78%] xl:max-w-[46rem]"
-                      : "group/message mr-auto max-w-[92%] rounded-3xl bg-muted px-4 py-3 sm:max-w-[78%] xl:max-w-[46rem]"
+                      ? "message-own group/message ml-auto max-w-[94%] rounded-[1.75rem] rounded-br-md px-4 py-3 text-primary-foreground sm:max-w-[82%] xl:max-w-[54rem]"
+                      : "message-other group/message mr-auto max-w-[94%] rounded-[1.75rem] rounded-bl-md border border-white/55 px-4 py-3 sm:max-w-[82%] xl:max-w-[54rem] dark:border-white/10"
                   }
                   key={message.id}
                 >
@@ -461,7 +465,7 @@ export function ChatPanel({
                       className={
                         own
                           ? "mb-2 block w-full rounded-2xl bg-white/15 px-3 py-2 text-left text-xs"
-                          : "mb-2 block w-full rounded-2xl bg-background px-3 py-2 text-left text-xs"
+                          : "mb-2 block w-full rounded-2xl border border-border bg-background/84 px-3 py-2 text-left text-xs"
                       }
                       onClick={() => setReplyTo(message)}
                       type="button"
@@ -494,13 +498,13 @@ export function ChatPanel({
                     </form>
                   ) : (
                     <>
-                      <p className="whitespace-pre-wrap break-words text-[0.97rem] leading-7">{message.body}</p>
+                      <p className="whitespace-pre-wrap break-words text-[1rem] leading-7">{message.body}</p>
                       {firstUrl ? (
                         <a
                           className={
                             own
                               ? "mt-3 block rounded-2xl bg-white/15 px-3 py-2 text-sm font-bold"
-                              : "mt-3 block rounded-2xl bg-background px-3 py-2 text-sm font-bold"
+                              : "mt-3 block rounded-2xl border border-border bg-background/84 px-3 py-2 text-sm font-bold"
                           }
                           href={firstUrl}
                           rel="noreferrer"
@@ -522,8 +526,8 @@ export function ChatPanel({
                         <div
                           className={
                             own
-                              ? "rounded-2xl bg-white/15 p-3"
-                              : "rounded-2xl bg-background p-3"
+                              ? "rounded-2xl bg-white/15 p-3 shadow-inner"
+                              : "rounded-2xl border border-border bg-background/88 p-3 shadow-inner"
                           }
                           key={attachment.id}
                         >
@@ -567,7 +571,7 @@ export function ChatPanel({
                             >
                               <img
                                 alt={attachment.originalName}
-                                className="max-h-80 w-full object-cover transition hover:scale-[1.01]"
+                                className="max-h-96 w-full object-cover transition duration-300 hover:scale-[1.01]"
                                 loading="lazy"
                                 src={`/api/files/${attachment.id}`}
                               />
@@ -575,7 +579,7 @@ export function ChatPanel({
                           ) : null}
                           {attachment.kind === "VIDEO" ? (
                             <video
-                              className="mb-3 max-h-80 w-full rounded-2xl"
+                              className="mb-3 max-h-96 w-full rounded-2xl"
                               controls
                               controlsList="nodownload"
                               preload="metadata"
@@ -615,8 +619,8 @@ export function ChatPanel({
                             aria-label={`${t.reactions}: ${emoji}`}
                             className={
                               reaction?.reactedByMe
-                                ? "rounded-full bg-background px-2 py-1 text-xs font-black text-foreground shadow-sm"
-                                : "rounded-full bg-background/50 px-2 py-1 text-xs font-bold"
+                                ? "interactive-lift rounded-full bg-background px-2.5 py-1.5 text-xs font-black text-foreground shadow-sm"
+                                : "interactive-lift rounded-full bg-background/50 px-2.5 py-1.5 text-xs font-bold"
                             }
                             type="submit"
                           >
@@ -640,7 +644,7 @@ export function ChatPanel({
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs opacity-80 transition group-hover/message:opacity-100">
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold opacity-80 transition group-hover/message:opacity-100">
                     <button
                       className="font-bold hover:opacity-100"
                       onClick={() => setReplyTo(message)}
@@ -703,17 +707,17 @@ export function ChatPanel({
 
       <form
         action={formAction}
-        className="grid shrink-0 gap-3 border-t border-border bg-card/95 p-3 backdrop-blur sm:grid-cols-[1fr_auto] sm:p-4"
+        className="composer-glow grid shrink-0 gap-3 border-t border-border/80 bg-card/88 p-3 backdrop-blur-2xl sm:grid-cols-[1fr_auto] sm:p-4"
         onSubmit={() => setReplyTo(null)}
         ref={formRef}
       >
         <input name="groupId" type="hidden" value={groupId} />
         <input name="replyToId" type="hidden" value={replyTo?.id ?? ""} />
         {selectedFile ? (
-          <div className="rounded-2xl border border-border bg-background px-4 py-3 sm:col-span-2">
+          <div className="surface-raised rounded-2xl px-4 py-3 sm:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary shadow-inner">
                   {selectedFile.type.startsWith("image/") ? (
                     <ImageIcon aria-hidden className="size-5" />
                   ) : (
@@ -748,13 +752,13 @@ export function ChatPanel({
             ) : null}
             {isPending ? (
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+                <div className="h-full w-1/2 animate-pulse rounded-full bg-[linear-gradient(90deg,var(--primary),var(--accent))]" />
               </div>
             ) : null}
           </div>
         ) : null}
         {replyTo ? (
-          <div className="rounded-2xl bg-muted px-4 py-3 sm:col-span-2">
+          <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 sm:col-span-2">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black text-primary">{t.replyingTo}</p>
@@ -776,13 +780,13 @@ export function ChatPanel({
           {t.inputLabel}
         </label>
         <textarea
-          className="max-h-32 min-h-12 resize-none rounded-2xl border border-border bg-background px-4 py-3 outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="max-h-36 min-h-14 resize-none rounded-2xl border border-border bg-background/86 px-4 py-3 text-base shadow-inner outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
           id="body"
           name="body"
           onKeyDown={submitOnEnter}
           placeholder={t.inputPlaceholder}
         />
-        <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-bold text-muted-foreground transition hover:bg-muted sm:col-span-2 lg:col-span-1">
+        <label className="interactive-lift flex min-h-12 cursor-pointer items-center gap-2 rounded-2xl border border-border bg-background/86 px-4 py-2 text-sm font-bold text-muted-foreground shadow-sm transition hover:bg-muted sm:col-span-2 lg:col-span-1">
           <Paperclip aria-hidden className="size-4" />
           {t.attachment}
           <span className="font-medium">({t.attachmentHint})</span>
@@ -797,7 +801,7 @@ export function ChatPanel({
         </label>
         <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
           {recordingState === "recording" ? (
-            <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-danger/20 bg-danger/10 px-3 text-danger">
+            <div className="flex min-h-12 items-center gap-2 rounded-2xl border border-danger/20 bg-danger/10 px-3 text-danger shadow-sm">
               <VoiceWave />
               <button
                 className="inline-flex items-center gap-2 text-sm font-black"
@@ -815,7 +819,7 @@ export function ChatPanel({
             </Button>
           )}
           {recordingState === "ready" ? (
-            <span className="inline-flex h-11 items-center rounded-2xl bg-success/10 px-3 text-sm font-bold text-success">
+            <span className="inline-flex h-12 items-center rounded-2xl bg-success/10 px-3 text-sm font-bold text-success shadow-inner">
               {t.voiceReady}
             </span>
           ) : null}

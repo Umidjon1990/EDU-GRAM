@@ -34,18 +34,21 @@ export async function AppShell({ children, fullName, role }: AppShellProps) {
     : 0;
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/88 backdrop-blur">
+    <main className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-30 border-b border-white/50 bg-background/76 shadow-[0_18px_55px_rgb(18_26_23_/_8%)] backdrop-blur-2xl dark:border-white/10">
         <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link className="flex items-center gap-3" href="/">
-            <span className="flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+          <Link className="group flex items-center gap-3" href="/">
+            <span className="relative flex size-12 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(135deg,var(--primary),color-mix(in_srgb,var(--primary)_70%,var(--accent)))] text-primary-foreground shadow-[var(--shadow-float)]">
+              <span className="absolute inset-x-1 top-1 h-3 rounded-full bg-white/24" />
               <GraduationCap aria-hidden className="size-5" />
             </span>
-            <span className="font-black">Modern Edu</span>
+            <span className="text-lg font-black tracking-normal transition group-hover:text-primary">
+              Modern Edu
+            </span>
           </Link>
 
           <div className="flex items-center gap-2">
-            <div className="hidden text-right sm:block">
+            <div className="hidden rounded-2xl border border-border bg-card/64 px-4 py-2 text-right shadow-sm backdrop-blur sm:block">
               <p className="text-sm font-bold">{fullName}</p>
               <p className="text-xs text-muted-foreground">{roleLabels[role]}</p>
             </div>
@@ -62,10 +65,10 @@ export async function AppShell({ children, fullName, role }: AppShellProps) {
             </form>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-[96rem] gap-2 overflow-x-auto px-4 pb-3 sm:px-6 lg:px-8">
+        <nav className="premium-scrollbar mx-auto flex max-w-[96rem] gap-2 overflow-x-auto px-4 pb-3 sm:px-6 lg:px-8">
           {navigationItems.map((item) => (
             <Link
-              className="focus-ring inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl px-3 text-sm font-bold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              className="focus-ring interactive-lift inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-transparent bg-card/44 px-3.5 text-sm font-bold text-muted-foreground backdrop-blur transition hover:border-border hover:bg-card hover:text-foreground"
               href={item.href}
               key={item.href}
             >

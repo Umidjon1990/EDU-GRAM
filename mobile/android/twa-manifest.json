@@ -1,0 +1,27 @@
+{
+  "packageId": "uz.modernedu.app",
+  "host": "edu-gram-production.up.railway.app",
+  "name": "Modern Edu",
+  "launcherName": "Modern Edu",
+  "display": "standalone",
+  "themeColor": "#0f8a7b",
+  "themeColorDark": "#101713",
+  "navigationColor": "#f7f8f5",
+  "navigationColorDark": "#101713",
+  "backgroundColor": "#f7f8f5",
+  "enableNotifications": true,
+  "startUrl": "/login",
+  "iconUrl": "https://edu-gram-production.up.railway.app/icons/icon-512.png",
+  "maskableIconUrl": "https://edu-gram-production.up.railway.app/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./modern-edu-release.keystore",
+    "alias": "modern-edu"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://edu-gram-production.up.railway.app/manifest.webmanifest",
+  "fallbackType": "customtabs"
+}

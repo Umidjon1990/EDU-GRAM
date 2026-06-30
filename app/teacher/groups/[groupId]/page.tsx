@@ -50,24 +50,26 @@ export default async function TeacherGroupChatPage({
 
   return (
     <AppShell fullName={user.fullName} role={user.role}>
-      <div className="grid gap-6">
-        <section className="max-w-3xl">
+      <div className="grid gap-4">
+        <section className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
           <p className="text-sm font-bold text-primary">6-bosqich</p>
-          <h1 className="mt-3 text-4xl font-black tracking-normal sm:text-5xl">
+          <h1 className="mt-2 text-3xl font-black tracking-normal sm:text-4xl">
             {group.name}
           </h1>
           <p className="mt-3 text-muted-foreground">
             {t.teacher}: {group.teacher.fullName}
           </p>
+          </div>
         </section>
-        <div className="grid gap-6 xl:grid-cols-[1fr_22rem]">
+        <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
           <ChatPanel
             canPin
             currentUserId={user.id}
             groupId={group.id}
             initialMessages={messages}
           />
-          <aside className="grid content-start gap-4">
+          <aside className="grid content-start gap-4 xl:sticky xl:top-36 xl:max-h-[calc(100dvh-10rem)] xl:overflow-y-auto">
             <AnnouncementForm groupId={group.id} />
             <PinnedList items={pinnedMessages} />
           </aside>

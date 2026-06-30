@@ -198,13 +198,13 @@ export const userManagementDictionary = {
     created: "O'quvchi hisobi yaratildi",
     bulkTitle: "Ommaviy qo'shish",
     bulkDescription:
-      "Matn, CSV yoki Exceldan ko'chirilgan jadvalni kiriting. Familiya login, telefon raqam parol bo'ladi.",
+      "Matn, CSV yoki Exceldan ko'chirilgan jadvalni kiriting. Familiya login bo'ladi, parol esa telefon raqamning oxirgi 9 ta raqamidan olinadi.",
     bulkTemplate:
-      "Ali Valiyev\n998901234567\nDilnoza Karimova\n998909876543",
+      "Ali Valiyev\n+998 90 123 45 67\nDilnoza Karimova\n+998 90 987 65 43",
     bulkCsvTemplate:
-      "Ali Valiyev,998901234567\nDilnoza Karimova,998909876543",
+      "Ali Valiyev,+998901234567\nDilnoza Karimova,+998909876543",
     bulkPlaceholder:
-      "Ali Valiyev,998901234567\nDilnoza Karimova,998909876543",
+      "Ali Valiyev,+998901234567\nDilnoza Karimova,+998909876543",
     bulkPreview: "Importdan oldingi ko'rinish",
     bulkValidRows: "{count} ta o'quvchi qo'shiladi",
     bulkInvalidRows: "Xato qatorlar",
@@ -213,6 +213,7 @@ export const userManagementDictionary = {
     bulkFullName: "Ism familiya",
     bulkPhone: "Telefon",
     bulkUsername: "Login",
+    bulkPassword: "Parol",
     bulkSubmit: "O'quvchilarni qo'shish",
     bulkCreated: "{count} ta o'quvchi qo'shildi",
   },
@@ -220,7 +221,7 @@ export const userManagementDictionary = {
     duplicateUsername: "Bu login allaqachon band",
     invalidData: "Ma'lumotlarni tekshiring",
     invalidBulkData: "Ro'yxat shablonga mos emas",
-    bulkPasswordTooShort: "Telefon raqam parol sifatida kamida 8 ta belgidan iborat bo'lishi kerak",
+    bulkPasswordTooShort: "Telefon raqamda kamida 9 ta raqam bo'lishi kerak",
     passwordTooShort: "Yangi parol kamida 8 ta belgidan iborat bo'lishi kerak",
     unknown: "Amal bajarilmadi. Qayta urinib ko'ring",
   },

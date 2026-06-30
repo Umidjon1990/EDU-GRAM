@@ -78,7 +78,7 @@ export async function bulkCreateStudentsAction(
   try {
     await prisma.$transaction(async (tx) => {
       for (const row of rows) {
-        if (row.password.length < 8) {
+        if (row.password.length !== 9) {
           throw new Error("BULK_PASSWORD_TOO_SHORT");
         }
 
@@ -298,7 +298,7 @@ function parseBulkStudents(text: string) {
       if (!fullName || !phone) continue;
 
       const username = normalizeUsername(fullName.split(/\s+/).at(-1) ?? fullName);
-      const password = phone.replace(/\s+/g, "");
+      const password = getPhonePassword(phone);
 
       if (username.length >= 3) {
         students.push({ fullName, username, password });
@@ -316,7 +316,7 @@ function parseBulkStudents(text: string) {
 
     const surname = fullName.split(/\s+/).at(-1) ?? fullName;
     const username = normalizeUsername(surname);
-    const password = phone.replace(/\s+/g, "");
+    const password = getPhonePassword(phone);
 
     if (username.length >= 3) {
       students.push({ fullName, username, password });
@@ -324,6 +324,10 @@ function parseBulkStudents(text: string) {
   }
 
   return students;
+}
+
+function getPhonePassword(value: string) {
+  return value.replace(/\D/g, "").slice(-9);
 }
 
 function splitImportLine(line: string) {

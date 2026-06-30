@@ -85,6 +85,7 @@ type PreviewRow = {
   fullName: string;
   phone: string;
   username: string;
+  password: string;
 };
 
 type InvalidRow = {
@@ -124,6 +125,7 @@ function ImportPreview({
                 <th className="px-3 py-2 font-bold">{t.bulkFullName}</th>
                 <th className="px-3 py-2 font-bold">{t.bulkPhone}</th>
                 <th className="px-3 py-2 font-bold">{t.bulkUsername}</th>
+                <th className="px-3 py-2 font-bold">{t.bulkPassword}</th>
               </tr>
             </thead>
             <tbody>
@@ -132,6 +134,7 @@ function ImportPreview({
                   <td className="px-3 py-2 font-semibold">{row.fullName}</td>
                   <td className="px-3 py-2 text-muted-foreground">{row.phone}</td>
                   <td className="px-3 py-2 text-muted-foreground">{row.username}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{row.password}</td>
                 </tr>
               ))}
             </tbody>
@@ -210,15 +213,19 @@ function addPreviewRow({
   raw: string;
   validRows: PreviewRow[];
 }) {
-  const password = phone?.replace(/\s+/g, "") ?? "";
+  const password = getPhonePassword(phone ?? "");
   const username = normalizeUsername(fullName?.split(/\s+/).at(-1) ?? "");
 
-  if (!fullName || !phone || password.length < 8 || username.length < 3) {
+  if (!fullName || !phone || password.length !== 9 || username.length < 3) {
     invalidRows.push({ line, value: raw });
     return;
   }
 
-  validRows.push({ line, fullName, phone, username });
+  validRows.push({ line, fullName, phone, username, password });
+}
+
+function getPhonePassword(value: string) {
+  return value.replace(/\D/g, "").slice(-9);
 }
 
 function splitImportLine(line: string) {

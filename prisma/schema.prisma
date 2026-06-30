@@ -138,6 +138,8 @@ model User {
   teachingGroups Group[]       @relation("GroupTeacher")
   groupMembers   GroupMember[]
   messages       Message[]
+  messageReactions MessageReaction[]
+  messageReadReceipts MessageReadReceipt[]
   files          FileAsset[]
   announcements Announcement[]
   assignments Assignment[]
@@ -323,10 +325,41 @@ model Message {
   replies      Message[]    @relation("MessageReplies")
   attachments  MessageAttachment[]
   pinnedInGroups PinnedMessage[]
+  reactions    MessageReaction[]
+  readReceipts MessageReadReceipt[]
 
   @@index([organizationId, groupId, createdAt])
   @@index([senderId, createdAt])
   @@index([replyToId])
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId, emoji])
+  @@index([userId, createdAt])
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId, readAt])
+  @@index([userId, readAt])
 }
 
 model PinnedMessage {

@@ -1,12 +1,14 @@
 "use server";
 
-import { FileAssetKind, UserRole, MessageType } from "@prisma/client";
+import { AssignmentStatus, AuditAction, FileAssetKind, UserRole, MessageType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import {
   createMessageSchema,
+  createAssignmentFromMessageSchema,
   deleteMessageSchema,
   editMessageSchema,
+  toggleReactionSchema,
 } from "@/features/messages/message-schema";
 import { getAccessibleGroup } from "@/lib/auth/group-access";
 import { requirePermission } from "@/lib/auth/permissions";
@@ -192,6 +194,121 @@ export async function deleteMessageAction(formData: FormData) {
 
   revalidatePath(`/teacher/groups/${message.groupId}`);
   revalidatePath(`/student/groups/${message.groupId}`);
+}
+
+export async function toggleMessageReactionAction(formData: FormData) {
+  const currentUser = await requirePermission("message:create:member");
+  const parsed = toggleReactionSchema.safeParse({
+    messageId: formData.get("messageId"),
+    emoji: formData.get("emoji"),
+  });
+
+  if (!parsed.success) return;
+
+  const message = await prisma.message.findFirst({
+    where: {
+      id: parsed.data.messageId,
+      organizationId: currentUser.organizationId,
+      deletedAt: null,
+    },
+    select: { id: true, groupId: true },
+  });
+
+  if (!message) return;
+
+  const group = await getAccessibleGroup({
+    groupId: message.groupId,
+    organizationId: currentUser.organizationId,
+    userId: currentUser.id,
+    role: currentUser.role,
+  });
+
+  if (!group) return;
+
+  const existing = await prisma.messageReaction.findUnique({
+    where: {
+      messageId_userId_emoji: {
+        messageId: message.id,
+        userId: currentUser.id,
+        emoji: parsed.data.emoji,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.messageReaction.delete({ where: { id: existing.id } });
+  } else {
+    await prisma.messageReaction.create({
+      data: {
+        messageId: message.id,
+        userId: currentUser.id,
+        emoji: parsed.data.emoji,
+      },
+    });
+  }
+
+  revalidatePath(`/teacher/groups/${message.groupId}`);
+  revalidatePath(`/student/groups/${message.groupId}`);
+}
+
+export async function createAssignmentFromMessageAction(formData: FormData) {
+  const currentUser = await requirePermission("assignment:create:owned_group");
+  const parsed = createAssignmentFromMessageSchema.safeParse({
+    messageId: formData.get("messageId"),
+  });
+
+  if (!parsed.success) return;
+
+  const message = await prisma.message.findFirst({
+    where: {
+      id: parsed.data.messageId,
+      organizationId: currentUser.organizationId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      body: true,
+      groupId: true,
+      sender: { select: { fullName: true } },
+      group: { select: { teacherId: true } },
+    },
+  });
+
+  if (!message) return;
+
+  const canCreate =
+    currentUser.role === UserRole.ADMIN || message.group.teacherId === currentUser.id;
+
+  if (!canCreate) return;
+
+  const title =
+    message.body.length > 80 ? `${message.body.slice(0, 77).trim()}...` : message.body;
+
+  const assignment = await prisma.assignment.create({
+    data: {
+      organizationId: currentUser.organizationId,
+      groupId: message.groupId,
+      teacherId: currentUser.id,
+      title: title || t.assignmentCreated,
+      description: `${message.sender.fullName}: ${message.body}`,
+      status: AssignmentStatus.PUBLISHED,
+    },
+    select: { id: true },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: currentUser.organizationId,
+      userId: currentUser.id,
+      action: AuditAction.ASSIGNMENT_CREATED,
+      metadata: { assignmentId: assignment.id, groupId: message.groupId, sourceMessageId: message.id },
+    },
+  });
+
+  revalidatePath(`/teacher/groups/${message.groupId}`);
+  revalidatePath("/teacher/assignments");
+  revalidatePath("/student/assignments");
 }
 
 function getFallbackBody(type: MessageType) {

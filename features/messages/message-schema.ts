@@ -24,4 +24,13 @@ export const deleteMessageSchema = z.object({
   messageId: z.string().cuid("Xabar topilmadi"),
 });
 
+export const toggleReactionSchema = z.object({
+  messageId: z.string().cuid("Xabar topilmadi"),
+  emoji: z.enum(["👍", "✅", "❓", "👏", "🔥"]),
+});
+
+export const createAssignmentFromMessageSchema = z.object({
+  messageId: z.string().cuid("Xabar topilmadi"),
+});
+
 export type CreateMessageInput = z.infer<typeof createMessageSchema>;

@@ -36,7 +36,7 @@ export default async function TeacherGroupChatPage({
     notFound();
   }
 
-  const messages = await getInitialMessages(group.id, user.organizationId);
+  const messages = await getInitialMessages(group.id, user.organizationId, user.id, true);
   const pinnedMessages = await prisma.pinnedMessage.findMany({
     where: { groupId: group.id },
     orderBy: { createdAt: "desc" },
@@ -77,7 +77,12 @@ export default async function TeacherGroupChatPage({
   );
 }
 
-async function getInitialMessages(groupId: string, organizationId: string) {
+async function getInitialMessages(
+  groupId: string,
+  organizationId: string,
+  currentUserId: string,
+  canInspectReads: boolean,
+) {
   const messages = await prisma.message.findMany({
     where: {
       groupId,
@@ -120,6 +125,18 @@ async function getInitialMessages(groupId: string, organizationId: string) {
       pinnedInGroups: {
         select: { id: true },
       },
+      reactions: {
+        select: {
+          emoji: true,
+          userId: true,
+        },
+      },
+      readReceipts: {
+        select: {
+          readAt: true,
+          user: { select: { id: true, fullName: true } },
+        },
+      },
     },
   });
 
@@ -129,7 +146,38 @@ async function getInitialMessages(groupId: string, organizationId: string) {
     editedAt: message.editedAt?.toISOString() ?? null,
     attachments: message.attachments.map((attachment) => attachment.file),
     pinned: message.pinnedInGroups.length > 0,
+    reactions: summarizeReactions(message.reactions, currentUserId),
+    readReceipts: canInspectReads
+      ? message.readReceipts.map((receipt) => ({
+          userId: receipt.user.id,
+          fullName: receipt.user.fullName,
+          readAt: receipt.readAt.toISOString(),
+        }))
+      : [],
+    seenByMe:
+      message.sender.id === currentUserId ||
+      message.readReceipts.some((receipt) => receipt.user.id === currentUserId),
   }));
+}
+
+function summarizeReactions(
+  reactions: { emoji: string; userId: string }[],
+  currentUserId: string,
+) {
+  const summary = new Map<string, { emoji: string; count: number; reactedByMe: boolean }>();
+
+  for (const reaction of reactions) {
+    const item = summary.get(reaction.emoji) ?? {
+      emoji: reaction.emoji,
+      count: 0,
+      reactedByMe: false,
+    };
+    item.count += 1;
+    item.reactedByMe ||= reaction.userId === currentUserId;
+    summary.set(reaction.emoji, item);
+  }
+
+  return Array.from(summary.values());
 }
 
 function PinnedList({

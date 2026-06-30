@@ -2,13 +2,23 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { Download, Mic, Paperclip, SendHorizonal, Square } from "lucide-react";
+import {
+  Download,
+  FileText,
+  Mic,
+  Paperclip,
+  Search,
+  SendHorizonal,
+  Square,
+} from "lucide-react";
 
 import {
   createMessageAction,
+  createAssignmentFromMessageAction,
   deleteMessageAction,
   editMessageAction,
   type MessageActionState,
+  toggleMessageReactionAction,
 } from "@/features/messages/actions";
 import { pinMessageAction, unpinMessageAction } from "@/features/announcements/actions";
 import { Button } from "@/components/ui/button";
@@ -37,6 +47,17 @@ type ChatMessage = {
     mimeType: string;
     size: number;
   }[];
+  reactions: {
+    emoji: string;
+    count: number;
+    reactedByMe: boolean;
+  }[];
+  readReceipts: {
+    userId: string;
+    fullName: string;
+    readAt: string;
+  }[];
+  seenByMe: boolean;
   pinned?: boolean;
 };
 
@@ -52,6 +73,7 @@ const initialState: MessageActionState = {
 };
 
 const t = chatDictionary;
+const reactionPresets = ["👍", "✅", "❓", "👏", "🔥"] as const;
 
 export function ChatPanel({
   canPin = false,
@@ -76,6 +98,8 @@ export function ChatPanel({
   >("idle");
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"all" | "media">("all");
 
   const streamUrl = useMemo(
     () => `/api/groups/${groupId}/messages/stream`,
@@ -104,6 +128,30 @@ export function ChatPanel({
       formRef.current?.reset();
     }
   }, [state.status]);
+
+  const filteredMessages = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const scopedMessages =
+      viewMode === "media"
+        ? messages.filter((message) => message.attachments.length > 0)
+        : messages;
+
+    if (!normalizedQuery) {
+      return scopedMessages;
+    }
+
+    return scopedMessages.filter((message) => {
+      const haystack = [
+        message.body,
+        message.sender.fullName,
+        ...message.attachments.map((attachment) => attachment.originalName),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [messages, query, viewMode]);
 
   async function startRecording() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -165,17 +213,62 @@ export function ChatPanel({
         </span>
       </div>
 
+      <div className="grid gap-3 border-b border-border px-4 py-3 md:grid-cols-[1fr_auto]">
+        <label className="relative block">
+          <span className="sr-only">{t.searchPlaceholder}</span>
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <input
+            className="h-12 w-full rounded-2xl border border-border bg-background pl-11 pr-4 text-sm font-semibold outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t.searchPlaceholder}
+            value={query}
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1">
+          <button
+            className={
+              viewMode === "all"
+                ? "rounded-xl bg-card px-3 py-2 text-sm font-black shadow-sm"
+                : "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground"
+            }
+            onClick={() => setViewMode("all")}
+            type="button"
+          >
+            {t.allMessages}
+          </button>
+          <button
+            className={
+              viewMode === "media"
+                ? "rounded-xl bg-card px-3 py-2 text-sm font-black shadow-sm"
+                : "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground"
+            }
+            onClick={() => setViewMode("media")}
+            type="button"
+          >
+            {t.mediaFiles}
+          </button>
+        </div>
+      </div>
+
       <div className="max-h-[55vh] min-h-[24rem] overflow-y-auto px-4 py-5">
         {messages.length === 0 ? (
           <p className="rounded-2xl bg-muted px-4 py-5 text-muted-foreground">
             {t.empty}
           </p>
+        ) : filteredMessages.length === 0 ? (
+          <p className="rounded-2xl bg-muted px-4 py-5 text-muted-foreground">
+            {t.noSearchResults}
+          </p>
         ) : (
           <div className="grid gap-3">
-            {messages.map((message) => {
+            {filteredMessages.map((message) => {
               const own = message.sender.id === currentUserId;
               const canDelete = own || canPin;
               const isEditing = editingId === message.id;
+              const firstUrl = getFirstUrl(message.body);
 
               return (
                 <article
@@ -227,7 +320,25 @@ export function ChatPanel({
                       </div>
                     </form>
                   ) : (
-                    <p className="whitespace-pre-wrap leading-7">{message.body}</p>
+                    <>
+                      <p className="whitespace-pre-wrap leading-7">{message.body}</p>
+                      {firstUrl ? (
+                        <a
+                          className={
+                            own
+                              ? "mt-3 block rounded-2xl bg-white/15 px-3 py-2 text-sm font-bold"
+                              : "mt-3 block rounded-2xl bg-background px-3 py-2 text-sm font-bold"
+                          }
+                          href={firstUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <span className="block text-xs opacity-75">{t.linkPreview}</span>
+                          <span className="mt-1 block truncate">{formatHost(firstUrl)}</span>
+                          <span className="mt-1 block text-xs opacity-75">{t.openLink}</span>
+                        </a>
+                      ) : null}
+                    </>
                   )}
                   {message.editedAt ? (
                     <p className="mt-1 text-xs font-semibold opacity-70">{t.edited}</p>
@@ -244,14 +355,30 @@ export function ChatPanel({
                           key={attachment.id}
                         >
                           {attachment.kind === "AUDIO" ? (
-                            <audio
-                              className="w-full"
-                              controls
-                              preload="none"
-                              src={`/api/files/${attachment.id}`}
-                            >
-                              {t.playAudio}
-                            </audio>
+                            <>
+                              <audio
+                                className="w-full"
+                                controls
+                                data-audio-id={attachment.id}
+                                preload="none"
+                                src={`/api/files/${attachment.id}`}
+                              >
+                                {t.playAudio}
+                              </audio>
+                              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black">
+                                <span className="opacity-75">{t.audioSpeed}</span>
+                                {[1, 1.5, 2].map((speed) => (
+                                  <button
+                                    className="rounded-full bg-background/80 px-2 py-1 text-foreground"
+                                    key={speed}
+                                    onClick={() => setAudioRate(attachment.id, speed)}
+                                    type="button"
+                                  >
+                                    {speed}x
+                                  </button>
+                                ))}
+                              </div>
+                            </>
                           ) : null}
                           <a
                             className="mt-2 flex items-center justify-between gap-3 text-sm font-bold"
@@ -269,6 +396,42 @@ export function ChatPanel({
                       ))}
                     </div>
                   ) : null}
+                  <div className="mt-3 flex flex-wrap items-center gap-1">
+                    {reactionPresets.map((emoji) => {
+                      const reaction = message.reactions.find((item) => item.emoji === emoji);
+                      return (
+                        <form action={toggleMessageReactionAction} key={emoji}>
+                          <input name="messageId" type="hidden" value={message.id} />
+                          <input name="emoji" type="hidden" value={emoji} />
+                          <button
+                            aria-label={`${t.reactions}: ${emoji}`}
+                            className={
+                              reaction?.reactedByMe
+                                ? "rounded-full bg-background px-2 py-1 text-sm font-black text-foreground shadow-sm"
+                                : "rounded-full bg-background/50 px-2 py-1 text-sm font-bold"
+                            }
+                            type="submit"
+                          >
+                            {emoji}
+                            {reaction ? (
+                              <span className="ml-1 text-xs">{reaction.count}</span>
+                            ) : null}
+                          </button>
+                        </form>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold opacity-75">
+                    {own ? <span>{message.seenByMe ? t.seen : t.notSeenYet}</span> : null}
+                    {canPin ? (
+                      <span title={message.readReceipts.map((receipt) => receipt.fullName).join(", ")}>
+                        {t.seenBy}:{" "}
+                        {message.readReceipts.length > 0
+                          ? message.readReceipts.map((receipt) => receipt.fullName).join(", ")
+                          : t.notSeenYet}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="mt-2 flex flex-wrap items-center gap-3">
                     <button
                       className="text-xs font-bold opacity-75 hover:opacity-100"
@@ -306,6 +469,18 @@ export function ChatPanel({
                           type="submit"
                         >
                           {message.pinned ? t.unpin : t.pin}
+                        </button>
+                      </form>
+                    ) : null}
+                    {canPin ? (
+                      <form action={createAssignmentFromMessageAction}>
+                        <input name="messageId" type="hidden" value={message.id} />
+                        <button
+                          className="inline-flex items-center gap-1 text-xs font-bold opacity-75 hover:opacity-100"
+                          type="submit"
+                        >
+                          <FileText aria-hidden className="size-3.5" />
+                          {t.makeAssignment}
                         </button>
                       </form>
                     ) : null}
@@ -413,4 +588,26 @@ function formatTime(value: string) {
     minute: "2-digit",
     timeZone: "Asia/Tashkent",
   }).format(new Date(value));
+}
+
+function getFirstUrl(text: string) {
+  return text.match(/https?:\/\/[^\s]+/i)?.[0] ?? null;
+}
+
+function formatHost(value: string) {
+  try {
+    const url = new URL(value);
+    return url.hostname;
+  } catch {
+    return value;
+  }
+}
+
+function setAudioRate(attachmentId: string, speed: number) {
+  const audio = document.querySelector<HTMLAudioElement>(
+    `audio[data-audio-id="${attachmentId}"]`,
+  );
+  if (audio) {
+    audio.playbackRate = speed;
+  }
 }

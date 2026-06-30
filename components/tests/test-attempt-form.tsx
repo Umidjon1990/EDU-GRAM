@@ -8,6 +8,7 @@ type Question = {
   id: string;
   prompt: string;
   options: unknown;
+  type?: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "WRITTEN";
 };
 
 const t = testDictionary;
@@ -28,16 +29,24 @@ export function TestAttemptForm({ testId, questions }: { testId: string; questio
             <legend className="font-bold">
               {index + 1}. {question.prompt}
             </legend>
-            <div className="mt-3 grid gap-2">
-              {Object.entries(options).map(([key, value]) => (
-                <label className="flex items-center gap-3 rounded-xl bg-background px-3 py-2 text-sm" key={key}>
-                  <input name={`answer:${question.id}`} required type="radio" value={key} />
-                  <span>
-                    <b>{key}.</b> {value}
-                  </span>
-                </label>
-              ))}
-            </div>
+            {question.type === "WRITTEN" ? (
+              <textarea
+                className="mt-3 min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                name={`answer:${question.id}`}
+                required
+              />
+            ) : (
+              <div className="mt-3 grid gap-2">
+                {Object.entries(options).map(([key, value]) => (
+                  <label className="flex items-center gap-3 rounded-xl bg-background px-3 py-2 text-sm" key={key}>
+                    <input name={`answer:${question.id}`} required type="radio" value={key} />
+                    <span>
+                      <b>{key}.</b> {value}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </fieldset>
         );
       })}

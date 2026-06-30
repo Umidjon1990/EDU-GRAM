@@ -1,6 +1,12 @@
 "use server";
 
-import { AuditAction, GroupMemberRole, NotificationKind, TestStatus } from "@prisma/client";
+import {
+  AuditAction,
+  GroupMemberRole,
+  NotificationKind,
+  TestQuestionType,
+  TestStatus,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { createTestSchema, submitTestSchema } from "@/features/tests/test-schema";
@@ -29,6 +35,11 @@ export async function createTestAction(
     optionC: formData.get("optionC"),
     optionD: formData.get("optionD"),
     correctAnswer: formData.get("correctAnswer"),
+    extraQuestions: formData.get("extraQuestions"),
+    timeLimitMinutes: formData.get("timeLimitMinutes"),
+    allowRetake: formData.get("allowRetake") === "on",
+    shuffleQuestions: formData.get("shuffleQuestions") === "on",
+    showAnswers: formData.get("showAnswers") === "on",
   });
 
   if (!parsed.success) {
@@ -42,6 +53,22 @@ export async function createTestAction(
     role: user.role,
   });
   if (!group) return { status: "error", message: t.errors.notAllowed };
+  const questions = [
+    {
+      type: TestQuestionType.MULTIPLE_CHOICE,
+      prompt: parsed.data.prompt,
+      options: {
+        A: parsed.data.optionA,
+        B: parsed.data.optionB,
+        C: parsed.data.optionC,
+        D: parsed.data.optionD,
+      },
+      correctAnswer: parsed.data.correctAnswer,
+      points: 1,
+      order: 0,
+    },
+    ...parseExtraQuestions(parsed.data.extraQuestions ?? ""),
+  ];
 
   await prisma.$transaction(async (tx) => {
     const test = await tx.test.create({
@@ -51,19 +78,14 @@ export async function createTestAction(
         teacherId: user.id,
         title: parsed.data.title,
         description: parsed.data.description || null,
+        timeLimitMinutes: parsed.data.timeLimitMinutes
+          ? Number(parsed.data.timeLimitMinutes)
+          : null,
+        allowRetake: parsed.data.allowRetake,
+        shuffleQuestions: parsed.data.shuffleQuestions,
+        showAnswers: parsed.data.showAnswers,
         questions: {
-          create: {
-            prompt: parsed.data.prompt,
-            options: {
-              A: parsed.data.optionA,
-              B: parsed.data.optionB,
-              C: parsed.data.optionC,
-              D: parsed.data.optionD,
-            },
-            correctAnswer: parsed.data.correctAnswer,
-            points: 1,
-            order: 0,
-          },
+          create: questions,
         },
       },
       select: { id: true },
@@ -114,12 +136,17 @@ export async function submitTestAction(formData: FormData) {
       status: TestStatus.PUBLISHED,
       group: { members: { some: { userId: user.id, role: GroupMemberRole.STUDENT } } },
     },
-    include: { questions: true },
+    include: { questions: true, attempts: { where: { studentId: user.id }, take: 1 } },
   });
   if (!test || test.questions.length === 0) return;
+  if (!test.allowRetake && test.attempts.length > 0) return;
 
   const maxScore = test.questions.reduce((total, question) => total + question.points, 0);
   const score = test.questions.reduce((total, question) => {
+    if (question.type === TestQuestionType.WRITTEN) {
+      return total;
+    }
+
     return total + (parsed.data.answers[question.id] === question.correctAnswer ? question.points : 0);
   }, 0);
 
@@ -140,4 +167,60 @@ export async function submitTestAction(formData: FormData) {
 
   revalidatePath("/student/tests");
   revalidatePath("/teacher/tests");
+}
+
+function parseExtraQuestions(text: string) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const parts = line.split("|").map((part) => part.trim()).filter(Boolean);
+      const [prompt, first, second, third, fourth, answer] = parts;
+
+      if (!prompt || !first) return null;
+
+      if (first.toLowerCase() === "yozma") {
+        return {
+          type: TestQuestionType.WRITTEN,
+          prompt,
+          options: {},
+          correctAnswer: "",
+          points: 1,
+          order: index + 1,
+        };
+      }
+
+      if (
+        first.toLowerCase() === "true" &&
+        second?.toLowerCase() === "false" &&
+        third
+      ) {
+        return {
+          type: TestQuestionType.TRUE_FALSE,
+          prompt,
+          options: { true: "To'g'ri", false: "Noto'g'ri" },
+          correctAnswer: third.toLowerCase(),
+          points: 1,
+          order: index + 1,
+        };
+      }
+
+      if (!second || !third || !fourth || !answer) return null;
+
+      return {
+        type: TestQuestionType.MULTIPLE_CHOICE,
+        prompt,
+        options: {
+          A: first,
+          B: second,
+          C: third,
+          D: fourth,
+        },
+        correctAnswer: answer.toUpperCase(),
+        points: 1,
+        order: index + 1,
+      };
+    })
+    .filter((question): question is NonNullable<typeof question> => Boolean(question));
 }

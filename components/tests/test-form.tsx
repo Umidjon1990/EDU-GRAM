@@ -40,6 +40,37 @@ export function TestForm({ groups }: { groups: { id: string; name: string }[] })
           </option>
         ))}
       </select>
+      <textarea
+        className="min-h-36 rounded-2xl border border-border bg-background px-4 py-3"
+        name="extraQuestions"
+        placeholder={t.extraQuestionsPlaceholder}
+      />
+      <div className="rounded-2xl bg-muted p-3 text-sm text-muted-foreground">
+        <p className="font-bold">{t.trueFalseHint}</p>
+        <p className="mt-1 font-bold">{t.writtenHint}</p>
+      </div>
+      <input
+        className="rounded-2xl border border-border bg-background px-4 py-3"
+        max={300}
+        min={1}
+        name="timeLimitMinutes"
+        placeholder={t.timeLimit}
+        type="number"
+      />
+      <div className="grid gap-2 text-sm font-bold text-muted-foreground">
+        <label className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
+          <input name="allowRetake" type="checkbox" />
+          {t.allowRetake}
+        </label>
+        <label className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
+          <input name="shuffleQuestions" type="checkbox" />
+          {t.shuffleQuestions}
+        </label>
+        <label className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
+          <input name="showAnswers" type="checkbox" />
+          {t.showAnswers}
+        </label>
+      </div>
       {state.message ? (
         <p className={state.status === "error" ? "text-sm font-semibold text-destructive" : "text-sm font-semibold text-primary"}>
           {state.message}

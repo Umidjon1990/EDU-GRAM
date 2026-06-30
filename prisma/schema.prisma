@@ -58,6 +58,12 @@ enum TestStatus {
   PUBLISHED
 }
 
+enum TestQuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  WRITTEN
+}
+
 enum NotificationKind {
   ANNOUNCEMENT
   ASSIGNMENT
@@ -243,6 +249,10 @@ model Test {
   teacherId      String
   title          String
   description    String?
+  timeLimitMinutes Int?
+  allowRetake    Boolean    @default(false)
+  shuffleQuestions Boolean  @default(false)
+  showAnswers    Boolean    @default(false)
   status         TestStatus @default(PUBLISHED)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -260,6 +270,7 @@ model Test {
 model TestQuestion {
   id            String   @id @default(cuid())
   testId        String
+  type          TestQuestionType @default(MULTIPLE_CHOICE)
   prompt        String
   options       Json
   correctAnswer String

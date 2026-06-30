@@ -47,13 +47,34 @@ export default async function TeacherTestsPage() {
                   <p className="text-sm font-bold text-primary">{test.group.name}</p>
                   <h2 className="mt-1 text-2xl font-black">{test.title}</h2>
                   {test.description ? <p className="mt-2 text-muted-foreground">{test.description}</p> : null}
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-black text-muted-foreground">
+                    {test.timeLimitMinutes ? <span className="rounded-full bg-muted px-3 py-1">{t.timeLimit}: {test.timeLimitMinutes}</span> : null}
+                    {test.allowRetake ? <span className="rounded-full bg-muted px-3 py-1">{t.allowRetake}</span> : null}
+                    {test.shuffleQuestions ? <span className="rounded-full bg-muted px-3 py-1">{t.shuffleQuestions}</span> : null}
+                    {test.showAnswers ? <span className="rounded-full bg-muted px-3 py-1">{t.showAnswers}</span> : null}
+                  </div>
                   <h3 className="mt-5 font-black">{t.questions}</h3>
                   <div className="mt-3 grid gap-2">
                     {test.questions.map((question, index) => (
                       <p className="rounded-2xl bg-muted p-3 text-sm" key={question.id}>
-                        {index + 1}. {question.prompt}
+                        {index + 1}. {question.prompt} · {getQuestionTypeLabel(question.type)}
                       </p>
                     ))}
+                  </div>
+                  <h3 className="mt-5 font-black">{t.questionAnalysis}</h3>
+                  <div className="mt-3 grid gap-2">
+                    {test.questions.map((question, index) => {
+                      const wrongCount = test.attempts.filter((attempt) => {
+                        const answers = attempt.answers as Record<string, string>;
+                        return answers[question.id] !== question.correctAnswer;
+                      }).length;
+
+                      return (
+                        <p className="rounded-2xl bg-muted p-3 text-sm" key={`${question.id}-analysis`}>
+                          {index + 1}. {wrongCount} ta xato
+                        </p>
+                      );
+                    })}
                   </div>
                   <h3 className="mt-5 font-black">{t.attempts}</h3>
                   {test.attempts.length === 0 ? (
@@ -75,4 +96,10 @@ export default async function TeacherTestsPage() {
       </div>
     </AppShell>
   );
+}
+
+function getQuestionTypeLabel(type: string) {
+  if (type === "TRUE_FALSE") return t.trueFalse;
+  if (type === "WRITTEN") return t.written;
+  return t.multipleChoice;
 }

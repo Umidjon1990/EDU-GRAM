@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { FileText, X } from "lucide-react";
 
 import { AudioSubmissionRecorder } from "@/components/assignments/audio-submission-recorder";
@@ -60,8 +60,20 @@ export function StudentSubmitForm({
     addFiles([file]);
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    formData.delete("attachments");
+    files.forEach((file) => formData.append("attachments", file));
+
+    startTransition(() => {
+      formAction(formData);
+    });
+  }
+
   return (
-    <form action={formAction} className="mt-4 grid gap-3">
+    <form className="mt-4 grid gap-3" onSubmit={handleSubmit}>
       <input name="assignmentId" type="hidden" value={assignmentId} />
       <textarea className="min-h-24 rounded-2xl border border-border bg-background px-4 py-3" name="body" placeholder={t.answerPlaceholder} />
       {responseMode === "AUDIO" ? (

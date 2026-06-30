@@ -85,14 +85,14 @@ export async function offloadAssignmentFileToTelegram({
 function getTelegramMethod(kind: FileAssetKind) {
   if (kind === FileAssetKind.AUDIO) return "sendAudio";
   if (kind === FileAssetKind.IMAGE) return "sendPhoto";
-  if (kind === FileAssetKind.VIDEO) return "sendVideo";
+  if (kind === FileAssetKind.VIDEO) return "sendDocument";
   return "sendDocument";
 }
 
 function getTelegramFileField(kind: FileAssetKind) {
   if (kind === FileAssetKind.AUDIO) return "audio";
   if (kind === FileAssetKind.IMAGE) return "photo";
-  if (kind === FileAssetKind.VIDEO) return "video";
+  if (kind === FileAssetKind.VIDEO) return "document";
   return "document";
 }
 

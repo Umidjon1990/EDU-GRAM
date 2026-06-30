@@ -49,3 +49,26 @@ export async function getLatestTelegramChatId(botToken: string) {
       "Telegram chat",
   };
 }
+
+export async function sendTelegramTextMessage({
+  botToken,
+  chatId,
+  text,
+}: {
+  botToken: string;
+  chatId: string;
+  text: string;
+}) {
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+    }),
+  });
+
+  return response.ok;
+}

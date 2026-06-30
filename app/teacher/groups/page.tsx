@@ -8,6 +8,7 @@ import {
   createGroupAction,
   removeStudentFromGroupAction,
   resolveGroupTelegramChatAction,
+  testGroupTelegramAction,
   updateGroupTelegramAction,
 } from "@/features/groups/actions";
 import { groupManagementDictionary } from "@/i18n/locales/uz-Latn-UZ";
@@ -89,6 +90,7 @@ export default async function TeacherGroupsPage() {
             students={students}
             telegramAction={updateGroupTelegramAction}
             telegramResolveAction={resolveGroupTelegramChatAction}
+            telegramTestAction={testGroupTelegramAction}
           />
         </div>
       </div>

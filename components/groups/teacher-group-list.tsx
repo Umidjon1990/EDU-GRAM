@@ -35,6 +35,7 @@ type TeacherGroupListProps = {
   removeAction: (formData: FormData) => Promise<void>;
   telegramAction: (formData: FormData) => Promise<void>;
   telegramResolveAction: (formData: FormData) => Promise<void>;
+  telegramTestAction: (formData: FormData) => Promise<void>;
 };
 
 const t = groupManagementDictionary;
@@ -46,6 +47,7 @@ export function TeacherGroupList({
   students,
   telegramAction,
   telegramResolveAction,
+  telegramTestAction,
 }: TeacherGroupListProps) {
   return (
     <section className="grid gap-4">
@@ -116,7 +118,20 @@ export function TeacherGroupList({
               <form action={telegramAction} className="mt-5 grid gap-3 rounded-2xl bg-muted p-4">
                 <input name="groupId" type="hidden" value={group.id} />
                 <div>
-                  <h4 className="font-black">{t.telegramTitle}</h4>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-black">{t.telegramTitle}</h4>
+                    <span
+                      className={
+                        group.telegramEnabled && group.telegramBotToken && group.telegramChatId
+                          ? "rounded-full bg-success/10 px-3 py-1 text-xs font-black text-success"
+                          : "rounded-full bg-danger/10 px-3 py-1 text-xs font-black text-danger"
+                      }
+                    >
+                      {group.telegramEnabled && group.telegramBotToken && group.telegramChatId
+                        ? t.telegramConnected
+                        : t.telegramNotConnected}
+                    </span>
+                  </div>
                   <p className="mt-1 text-sm text-muted-foreground">{t.telegramHint}</p>
                   <p className="mt-2 rounded-2xl bg-card/70 px-3 py-2 text-xs font-bold text-muted-foreground">
                     {t.telegramAutoHelp}
@@ -161,9 +176,12 @@ export function TeacherGroupList({
                     </span>
                   </label>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 lg:grid-cols-3">
                   <Button formAction={telegramResolveAction} type="submit" variant="secondary">
                     {t.telegramFindChatId}
+                  </Button>
+                  <Button formAction={telegramTestAction} type="submit" variant="secondary">
+                    {t.telegramTest}
                   </Button>
                   <Button type="submit" variant="secondary">
                     {t.telegramSave}

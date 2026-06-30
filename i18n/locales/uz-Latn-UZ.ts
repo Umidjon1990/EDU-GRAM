@@ -258,6 +258,9 @@ export const groupManagementDictionary = {
   telegramChatId: "Qabul qiluvchi Chat ID",
   telegramSave: "Telegramni saqlash",
   telegramFindChatId: "Chat IDni topish",
+  telegramTest: "Test xabar yuborish",
+  telegramConnected: "Ulangan",
+  telegramNotConnected: "Ulanmagan",
   telegramHint:
     "O'quvchi vazifa faylini yuborganda fayl Telegramga o'tadi va lokal xotira bo'shatiladi. Telegram yuborishi uchun qabul qiluvchi Chat ID kerak.",
   telegramAutoHelp:

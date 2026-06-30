@@ -60,7 +60,7 @@ export default async function StudentGroupChatPage({
             {t.teacher}: {group.teacher.fullName}
           </p>
         </section>
-        <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <ChatPanel
             currentUserId={user.id}
             groupId={group.id}

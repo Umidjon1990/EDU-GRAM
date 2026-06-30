@@ -8,7 +8,9 @@ import {
   Download,
   FileText,
   Image as ImageIcon,
+  Maximize2,
   Mic,
+  Minimize2,
   Paperclip,
   Search,
   SendHorizonal,
@@ -75,6 +77,12 @@ type ChatPanelProps = {
   initialUnreadCount?: number;
 };
 
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
+
 const initialState: MessageActionState = {
   status: "idle",
 };
@@ -100,8 +108,11 @@ export function ChatPanel({
   const formRef = useRef<HTMLFormElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioBuffersRef = useRef<Float32Array[]>([]);
+  const audioSampleRateRef = useRef(44100);
   const filePreviewUrlRef = useRef<string | null>(null);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "ready"
@@ -118,6 +129,7 @@ export function ChatPanel({
     name: string;
     src: string;
   } | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const clearFilePreview = useCallback((updateState = true) => {
     if (filePreviewUrlRef.current) {
@@ -145,6 +157,19 @@ export function ChatPanel({
     },
     [clearFilePreview],
   );
+
+  const stopAudioCapture = useCallback(async () => {
+    audioProcessorRef.current?.disconnect();
+    audioProcessorRef.current = null;
+    audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+    audioStreamRef.current = null;
+
+    if (audioContextRef.current?.state !== "closed") {
+      await audioContextRef.current?.close();
+    }
+
+    audioContextRef.current = null;
+  }, []);
 
   const streamUrl = useMemo(
     () => `/api/groups/${groupId}/messages/stream`,
@@ -192,8 +217,11 @@ export function ChatPanel({
   }, [clearFilePreview, state.status]);
 
   useEffect(() => {
-    return () => clearFilePreview(false);
-  }, [clearFilePreview]);
+    return () => {
+      clearFilePreview(false);
+      void stopAudioCapture();
+    };
+  }, [clearFilePreview, stopAudioCapture]);
 
   const filteredMessages = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -224,36 +252,29 @@ export function ChatPanel({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-      mediaRecorderRef.current = recorder;
+      const AudioContextConstructor =
+        window.AudioContext ?? window.webkitAudioContext;
+      if (!AudioContextConstructor) {
+        throw new Error("AUDIO_CONTEXT_UNAVAILABLE");
+      }
+      const audioContext = new AudioContextConstructor();
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      audioBuffersRef.current = [];
+      audioSampleRateRef.current = audioContext.sampleRate;
+      audioStreamRef.current = stream;
+      audioContextRef.current = audioContext;
+      audioProcessorRef.current = processor;
+
+      processor.onaudioprocess = (event) => {
+        audioBuffersRef.current.push(
+          new Float32Array(event.inputBuffer.getChannelData(0)),
+        );
       };
 
-      recorder.onstop = () => {
-        const mimeType = recorder.mimeType || "audio/webm";
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        const audioFile = new File([audioBlob], `voice-${Date.now()}.webm`, {
-          type: mimeType,
-        });
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(audioFile);
-
-        if (fileInputRef.current) {
-          fileInputRef.current.files = dataTransfer.files;
-        }
-
-        stream.getTracks().forEach((track) => track.stop());
-        setFilePreview(audioFile);
-        setSelectedFile(audioFile);
-        setRecordingState("ready");
-      };
-
-      recorder.start();
+      source.connect(processor);
+      processor.connect(audioContext.destination);
       setRecordingState("recording");
     } catch {
       setClientError(t.recordingUnavailable);
@@ -261,8 +282,25 @@ export function ChatPanel({
     }
   }
 
-  function stopRecording() {
-    mediaRecorderRef.current?.stop();
+  async function stopRecording() {
+    const audioBlob = encodeWav(
+      audioBuffersRef.current,
+      audioSampleRateRef.current,
+    );
+    const audioFile = new File([audioBlob], `voice-${Date.now()}.wav`, {
+      type: "audio/wav",
+    });
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(audioFile);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.files = dataTransfer.files;
+    }
+
+    await stopAudioCapture();
+    setFilePreview(audioFile);
+    setSelectedFile(audioFile);
+    setRecordingState("ready");
   }
 
   function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
@@ -308,7 +346,13 @@ export function ChatPanel({
   }
 
   return (
-    <section className="flex min-h-[38rem] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm lg:h-[calc(100dvh-15rem)] xl:h-[calc(100dvh-13rem)]">
+    <section
+      className={
+        isFullscreen
+          ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-card"
+          : "flex min-h-[42rem] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm lg:h-[calc(100dvh-11rem)]"
+      }
+    >
       <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
         <div>
           <h2 className="text-xl font-black sm:text-2xl">{t.title}</h2>
@@ -316,9 +360,23 @@ export function ChatPanel({
             {t.streamStatus[streamStatus]}
           </p>
         </div>
-        <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-bold text-success">
-          {t.live}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-bold text-success">
+            {t.live}
+          </span>
+          <button
+            aria-label={isFullscreen ? t.exitFullscreen : t.enterFullscreen}
+            className="grid size-10 place-items-center rounded-2xl border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            onClick={() => setIsFullscreen((current) => !current)}
+            type="button"
+          >
+            {isFullscreen ? (
+              <Minimize2 aria-hidden className="size-4" />
+            ) : (
+              <Maximize2 aria-hidden className="size-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid shrink-0 gap-3 border-b border-border bg-card px-3 py-3 md:grid-cols-[1fr_auto] sm:px-4">
@@ -539,7 +597,7 @@ export function ChatPanel({
                             </a>
                           ) : (
                             <p className="mt-2 text-xs font-semibold opacity-75">
-                              {attachment.originalName} · {formatSize(attachment.size)}
+                              {attachment.originalName} - {formatSize(attachment.size)}
                             </p>
                           )}
                         </div>
@@ -869,6 +927,57 @@ function VoiceWave() {
       ))}
     </span>
   );
+}
+
+function encodeWav(buffers: Float32Array[], sampleRate: number) {
+  const samples = mergeAudioBuffers(buffers);
+  const bytesPerSample = 2;
+  const blockAlign = bytesPerSample;
+  const dataSize = samples.length * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 8 * bytesPerSample, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (const sample of samples) {
+    const clamped = Math.max(-1, Math.min(1, sample));
+    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
+    offset += 2;
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
+function mergeAudioBuffers(buffers: Float32Array[]) {
+  const length = buffers.reduce((total, buffer) => total + buffer.length, 0);
+  const result = new Float32Array(length);
+  let offset = 0;
+
+  for (const buffer of buffers) {
+    result.set(buffer, offset);
+    offset += buffer.length;
+  }
+
+  return result;
+}
+
+function writeAscii(view: DataView, offset: number, value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    view.setUint8(offset + index, value.charCodeAt(index));
+  }
 }
 
 function formatSize(size: number) {

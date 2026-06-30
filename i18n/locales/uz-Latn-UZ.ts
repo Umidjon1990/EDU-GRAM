@@ -278,6 +278,8 @@ export const chatDictionary = {
   noChats: "Hali chat yo'q. Avval guruh yarating.",
   lastMessage: "So'nggi xabar",
   live: "Jonli chat",
+  enterFullscreen: "To'liq chat rejimi",
+  exitFullscreen: "Oddiy rejimga qaytish",
   teacher: "Ustoz",
   members: "A'zolar",
   empty: "Hali xabar yo'q. Birinchi xabarni yuboring.",

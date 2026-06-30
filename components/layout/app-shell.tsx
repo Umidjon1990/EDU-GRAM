@@ -36,7 +36,7 @@ export async function AppShell({ children, fullName, role }: AppShellProps) {
   return (
     <main className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/88 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link className="flex items-center gap-3" href="/">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
               <GraduationCap aria-hidden className="size-5" />
@@ -62,7 +62,7 @@ export async function AppShell({ children, fullName, role }: AppShellProps) {
             </form>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6 lg:px-8">
+        <nav className="mx-auto flex max-w-[96rem] gap-2 overflow-x-auto px-4 pb-3 sm:px-6 lg:px-8">
           {navigationItems.map((item) => (
             <Link
               className="focus-ring inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl px-3 text-sm font-bold text-muted-foreground transition hover:bg-muted hover:text-foreground"
@@ -80,7 +80,7 @@ export async function AppShell({ children, fullName, role }: AppShellProps) {
           ))}
         </nav>
       </header>
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[96rem] px-4 py-8 sm:px-6 lg:px-8">
         {children}
       </div>
     </main>

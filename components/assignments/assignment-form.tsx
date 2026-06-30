@@ -7,6 +7,13 @@ import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 
 const t = assignmentDictionary;
 const initialState: AssignmentState = { status: "idle" };
+const assignmentSections = [
+  "ORAL_AUDIO_TRANSLATION",
+  "READING_WRITTEN_TRANSLATION",
+  "MEMORIZATION_VIDEO",
+  "CUSTOM",
+] as const;
+const responseModes = ["TEXT", "AUDIO", "IMAGE", "VIDEO", "FILE"] as const;
 
 export function AssignmentForm({ groups }: { groups: { id: string; name: string }[] }) {
   const [state, formAction, isPending] = useActionState(createAssignmentAction, initialState);
@@ -19,8 +26,31 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
           <option value="">{t.chooseGroup}</option>
           {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
+        <select className="rounded-2xl border border-border bg-background px-4 py-3" name="section" required>
+          {assignmentSections.map((section) => (
+            <option key={section} value={section}>
+              {t.sections[section]}
+            </option>
+          ))}
+        </select>
+        <select className="rounded-2xl border border-border bg-background px-4 py-3" name="responseMode" required>
+          {responseModes.map((mode) => (
+            <option key={mode} value={mode}>
+              {t.responseModes[mode]}
+            </option>
+          ))}
+        </select>
         <input className="rounded-2xl border border-border bg-background px-4 py-3" name="title" placeholder={t.titlePlaceholder} required />
         <textarea className="min-h-28 rounded-2xl border border-border bg-background px-4 py-3" name="description" placeholder={t.descriptionPlaceholder} required />
+        <label className="grid gap-2 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-sm font-bold text-muted-foreground">
+          <span>{t.sourceFile}</span>
+          <span>{t.maxFileSize}</span>
+          <input
+            accept="text/plain,application/pdf,image/*,audio/*,video/mp4,video/webm,video/quicktime"
+            name="sourceFile"
+            type="file"
+          />
+        </label>
         <input className="rounded-2xl border border-border bg-background px-4 py-3" name="dueAt" type="datetime-local" />
         <input className="rounded-2xl border border-border bg-background px-4 py-3" defaultValue={100} min={1} name="maxScore" placeholder={t.maxScore} type="number" />
         <textarea className="min-h-24 rounded-2xl border border-border bg-background px-4 py-3" name="rubric" placeholder={t.rubricPlaceholder} />

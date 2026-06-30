@@ -15,6 +15,9 @@ type TeacherGroup = {
   name: string;
   description: string | null;
   chatEnabled: boolean;
+  telegramEnabled: boolean;
+  telegramBotToken: string | null;
+  telegramChatId: string | null;
   members: {
     id: string;
     role: GroupMemberRole;
@@ -30,6 +33,7 @@ type TeacherGroupListProps = {
   students: StudentOption[];
   addAction: (formData: FormData) => Promise<void>;
   removeAction: (formData: FormData) => Promise<void>;
+  telegramAction: (formData: FormData) => Promise<void>;
 };
 
 const t = groupManagementDictionary;
@@ -39,6 +43,7 @@ export function TeacherGroupList({
   groups,
   removeAction,
   students,
+  telegramAction,
 }: TeacherGroupListProps) {
   return (
     <section className="grid gap-4">
@@ -104,6 +109,40 @@ export function TeacherGroupList({
                   ))}
                 </select>
                 <Button type="submit">{t.addStudent}</Button>
+              </form>
+
+              <form action={telegramAction} className="mt-5 grid gap-3 rounded-2xl bg-muted p-4">
+                <input name="groupId" type="hidden" value={group.id} />
+                <div>
+                  <h4 className="font-black">{t.telegramTitle}</h4>
+                  <p className="mt-1 text-sm text-muted-foreground">{t.telegramHint}</p>
+                </div>
+                <label className="flex items-center gap-2 text-sm font-bold">
+                  <input
+                    defaultChecked={group.telegramEnabled}
+                    name="telegramEnabled"
+                    type="checkbox"
+                  />
+                  {t.telegramEnabled}
+                </label>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <input
+                    className="h-11 rounded-2xl border border-border bg-background px-3 text-sm outline-none"
+                    defaultValue={group.telegramBotToken ?? ""}
+                    name="telegramBotToken"
+                    placeholder={t.telegramBotToken}
+                    type="password"
+                  />
+                  <input
+                    className="h-11 rounded-2xl border border-border bg-background px-3 text-sm outline-none"
+                    defaultValue={group.telegramChatId ?? ""}
+                    name="telegramChatId"
+                    placeholder={t.telegramChatId}
+                  />
+                </div>
+                <Button type="submit" variant="secondary">
+                  {t.telegramSave}
+                </Button>
               </form>
 
               <div className="mt-5 grid gap-2">

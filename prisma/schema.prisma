@@ -112,6 +112,23 @@ enum MessageType {
 enum FileAssetKind {
   FILE
   AUDIO
+  IMAGE
+  VIDEO
+}
+
+enum AssignmentSection {
+  ORAL_AUDIO_TRANSLATION
+  READING_WRITTEN_TRANSLATION
+  MEMORIZATION_VIDEO
+  CUSTOM
+}
+
+enum AssignmentResponseMode {
+  TEXT
+  AUDIO
+  IMAGE
+  VIDEO
+  FILE
 }
 
 model Organization {
@@ -181,6 +198,9 @@ model Group {
   description    String?
   status         GroupStatus @default(ACTIVE)
   chatEnabled    Boolean     @default(true)
+  telegramEnabled Boolean    @default(false)
+  telegramBotToken String?
+  telegramChatId String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -204,6 +224,9 @@ model Assignment {
   teacherId      String
   title          String
   description    String
+  section        AssignmentSection @default(CUSTOM)
+  responseMode   AssignmentResponseMode @default(TEXT)
+  sourceFileId   String?
   dueAt          DateTime?
   maxScore       Int              @default(100)
   rubric         Json?
@@ -214,10 +237,12 @@ model Assignment {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  sourceFile   FileAsset?   @relation("AssignmentSourceFile", fields: [sourceFileId], references: [id], onDelete: SetNull)
   submissions  AssignmentSubmission[]
 
   @@index([organizationId, groupId, createdAt])
   @@index([teacherId, createdAt])
+  @@index([sourceFileId])
 }
 
 model AssignmentSubmission {
@@ -444,12 +469,17 @@ model FileAsset {
   originalName   String
   mimeType       String
   size           Int
+  telegramFileId String?
+  telegramMessageId String?
+  offloadedAt    DateTime?
+  storageDeletedAt DateTime?
   createdAt      DateTime      @default(now())
 
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   owner        User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   attachments  MessageAttachment[]
   assignmentSubmissionAttachments AssignmentSubmissionAttachment[]
+  assignmentSources Assignment[] @relation("AssignmentSourceFile")
 
   @@index([organizationId, ownerId])
   @@index([organizationId, createdAt])

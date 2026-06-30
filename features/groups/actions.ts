@@ -14,6 +14,7 @@ import {
   addGroupMemberSchema,
   createGroupSchema,
   removeGroupMemberSchema,
+  updateGroupTelegramSchema,
 } from "@/features/groups/group-schema";
 import { requirePermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
@@ -196,6 +197,45 @@ export async function removeStudentFromGroupAction(formData: FormData) {
       metadata: {
         groupId: group.id,
         memberId: parsed.data.memberId,
+      },
+    },
+  });
+
+  revalidatePath("/teacher/groups");
+}
+
+export async function updateGroupTelegramAction(formData: FormData) {
+  const currentUser = await requirePermission("group:update:owned");
+  const parsed = updateGroupTelegramSchema.safeParse({
+    groupId: formData.get("groupId"),
+    telegramEnabled: formData.get("telegramEnabled") === "on",
+    telegramBotToken: formData.get("telegramBotToken"),
+    telegramChatId: formData.get("telegramChatId"),
+  });
+
+  if (!parsed.success) return;
+
+  await prisma.group.updateMany({
+    where: {
+      id: parsed.data.groupId,
+      organizationId: currentUser.organizationId,
+      teacherId: currentUser.id,
+    },
+    data: {
+      telegramEnabled: parsed.data.telegramEnabled,
+      telegramBotToken: parsed.data.telegramBotToken || null,
+      telegramChatId: parsed.data.telegramChatId || null,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: currentUser.organizationId,
+      userId: currentUser.id,
+      action: AuditAction.GROUP_UPDATED,
+      metadata: {
+        groupId: parsed.data.groupId,
+        telegramEnabled: parsed.data.telegramEnabled,
       },
     },
   });

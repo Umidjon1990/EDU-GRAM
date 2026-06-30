@@ -1,13 +1,12 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { FileAssetKind } from "@prisma/client";
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
-const MAX_AUDIO_SIZE = 12 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 40 * 1024 * 1024;
 const storageRoot = path.join(process.cwd(), "storage", "uploads");
 
 const allowedDocumentTypes = new Set([
@@ -20,6 +19,9 @@ const allowedDocumentTypes = new Set([
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ]);
+
+const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedVideoTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 export type StoredFile = {
   kind: FileAssetKind;
@@ -35,9 +37,8 @@ export async function storeUploadedFile(file: File): Promise<StoredFile | null> 
   }
 
   const kind = getFileKind(file.type);
-  const maxSize = kind === FileAssetKind.AUDIO ? MAX_AUDIO_SIZE : MAX_FILE_SIZE;
 
-  if (file.size > maxSize || !isAllowedMimeType(file.type, kind)) {
+  if (file.size > MAX_UPLOAD_SIZE || !isAllowedMimeType(file.type, kind)) {
     throw new Error("INVALID_FILE");
   }
 
@@ -62,6 +63,18 @@ export async function readStoredFile(storageKey: string) {
   return readFile(getStoragePath(storageKey));
 }
 
+export async function deleteStoredFile(storageKey: string) {
+  try {
+    await unlink(getStoragePath(storageKey));
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 function getStoragePath(storageKey: string) {
   const normalizedKey = storageKey.replaceAll("\\", "/");
   const absolutePath = path.resolve(storageRoot, normalizedKey);
@@ -74,12 +87,21 @@ function getStoragePath(storageKey: string) {
 }
 
 function getFileKind(mimeType: string) {
-  return mimeType.startsWith("audio/") ? FileAssetKind.AUDIO : FileAssetKind.FILE;
+  if (mimeType.startsWith("audio/")) return FileAssetKind.AUDIO;
+  if (mimeType.startsWith("image/")) return FileAssetKind.IMAGE;
+  if (mimeType.startsWith("video/")) return FileAssetKind.VIDEO;
+  return FileAssetKind.FILE;
 }
 
 function isAllowedMimeType(mimeType: string, kind: FileAssetKind) {
   if (kind === FileAssetKind.AUDIO) {
     return mimeType.startsWith("audio/");
+  }
+  if (kind === FileAssetKind.IMAGE) {
+    return allowedImageTypes.has(mimeType);
+  }
+  if (kind === FileAssetKind.VIDEO) {
+    return allowedVideoTypes.has(mimeType);
   }
 
   return allowedDocumentTypes.has(mimeType);

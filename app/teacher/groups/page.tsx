@@ -7,6 +7,7 @@ import {
   addStudentToGroupAction,
   createGroupAction,
   removeStudentFromGroupAction,
+  updateGroupTelegramAction,
 } from "@/features/groups/actions";
 import { groupManagementDictionary } from "@/i18n/locales/uz-Latn-UZ";
 import { requirePermission } from "@/lib/auth/permissions";
@@ -33,6 +34,9 @@ export default async function TeacherGroupsPage() {
         name: true,
         description: true,
         chatEnabled: true,
+        telegramEnabled: true,
+        telegramBotToken: true,
+        telegramChatId: true,
         members: {
           orderBy: { createdAt: "asc" },
           select: {
@@ -82,6 +86,7 @@ export default async function TeacherGroupsPage() {
             groups={groups}
             removeAction={removeStudentFromGroupAction}
             students={students}
+            telegramAction={updateGroupTelegramAction}
           />
         </div>
       </div>

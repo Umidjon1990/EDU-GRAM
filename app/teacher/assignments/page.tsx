@@ -36,13 +36,20 @@ export default async function TeacherAssignmentsPage() {
             },
           },
         },
+        sourceFile: {
+          select: {
+            id: true,
+            originalName: true,
+            storageDeletedAt: true,
+          },
+        },
         submissions: {
           include: {
             student: { select: { id: true, fullName: true } },
             attachments: {
               include: {
                 file: {
-                  select: { id: true, originalName: true, size: true },
+                  select: { id: true, originalName: true, size: true, storageDeletedAt: true },
                 },
               },
             },
@@ -79,7 +86,22 @@ export default async function TeacherAssignmentsPage() {
                     {assignment.maxScore} {t.grade}
                   </span>
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-sm font-black text-muted-foreground">
+                  <span className="rounded-full bg-muted px-3 py-1">{t.sections[assignment.section]}</span>
+                  <span className="rounded-full bg-muted px-3 py-1">{t.responseHint}: {t.responseModes[assignment.responseMode]}</span>
+                </div>
                 <p className="mt-3 whitespace-pre-wrap text-muted-foreground">{assignment.description}</p>
+                {assignment.sourceFile ? (
+                  assignment.sourceFile.storageDeletedAt ? (
+                    <p className="mt-3 rounded-2xl bg-muted px-3 py-2 text-sm font-bold text-muted-foreground">
+                      {assignment.sourceFile.originalName} · {t.telegramOffloaded}
+                    </p>
+                  ) : (
+                    <a className="mt-3 inline-flex rounded-2xl bg-muted px-3 py-2 text-sm font-bold text-primary" href={`/api/files/${assignment.sourceFile.id}`}>
+                      {assignment.sourceFile.originalName}
+                    </a>
+                  )
+                ) : null}
                 {assignment.dueAt ? (
                   <p className="mt-3 text-sm font-bold text-muted-foreground">
                     {t.dueAt}: {formatUzDateTime(assignment.dueAt)}
@@ -131,9 +153,15 @@ export default async function TeacherAssignmentsPage() {
                           <div className="mt-3 grid gap-2">
                             <p className="text-sm font-black">{t.attachedFiles}</p>
                             {submission.attachments.map((attachment) => (
-                              <a className="rounded-2xl bg-background px-3 py-2 text-sm font-bold text-primary" href={`/api/files/${attachment.file.id}`} key={attachment.id}>
-                                {attachment.file.originalName}
-                              </a>
+                              attachment.file.storageDeletedAt ? (
+                                <p className="rounded-2xl bg-background px-3 py-2 text-sm font-bold text-muted-foreground" key={attachment.id}>
+                                  {attachment.file.originalName} - {t.telegramOffloaded}
+                                </p>
+                              ) : (
+                                <a className="rounded-2xl bg-background px-3 py-2 text-sm font-bold text-primary" href={`/api/files/${attachment.file.id}`} key={attachment.id}>
+                                  {attachment.file.originalName}
+                                </a>
+                              )
                             ))}
                           </div>
                         ) : null}

@@ -8,18 +8,32 @@ import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 const t = assignmentDictionary;
 const initialState: AssignmentState = { status: "idle" };
 
-export function StudentSubmitForm({ assignmentId }: { assignmentId: string }) {
+export function StudentSubmitForm({
+  assignmentId,
+  responseMode = "TEXT",
+}: {
+  assignmentId: string;
+  responseMode?: "TEXT" | "AUDIO" | "IMAGE" | "VIDEO" | "FILE";
+}) {
   const [state, formAction, isPending] = useActionState(submitAssignmentAction, initialState);
+  const accept = getAccept(responseMode);
   return (
     <form action={formAction} className="mt-4 grid gap-3">
       <input name="assignmentId" type="hidden" value={assignmentId} />
       <textarea className="min-h-24 rounded-2xl border border-border bg-background px-4 py-3" name="body" placeholder={t.answerPlaceholder} />
       <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-sm font-black text-muted-foreground hover:bg-muted">
         {t.fileAttachment}
-        <input className="sr-only" name="attachment" type="file" />
+        <input accept={accept} className="sr-only" name="attachment" type="file" />
       </label>
       <Button disabled={isPending} type="submit">{isPending ? t.submitting : t.submit}</Button>
       {state.message ? <p className="text-sm font-bold text-primary">{state.message}</p> : null}
     </form>
   );
+}
+
+function getAccept(responseMode: string) {
+  if (responseMode === "AUDIO") return "audio/*";
+  if (responseMode === "IMAGE") return "image/jpeg,image/png,image/webp";
+  if (responseMode === "VIDEO") return "video/mp4,video/webm,video/quicktime";
+  return "application/pdf,image/jpeg,image/png,image/webp,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,video/mp4,video/webm,video/quicktime";
 }

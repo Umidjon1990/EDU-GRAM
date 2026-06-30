@@ -1,6 +1,14 @@
 "use server";
 
-import { AssignmentStatus, AuditAction, GroupMemberRole, NotificationKind, SubmissionStatus } from "@prisma/client";
+import {
+  AssignmentResponseMode,
+  AssignmentStatus,
+  AuditAction,
+  FileAssetKind,
+  GroupMemberRole,
+  NotificationKind,
+  SubmissionStatus,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import {
@@ -12,6 +20,7 @@ import { getAccessibleGroup } from "@/lib/auth/group-access";
 import { requirePermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { storeUploadedFile } from "@/lib/storage/local-storage";
+import { offloadAssignmentFileToTelegram } from "@/lib/telegram/assignment-offload";
 import { assignmentDictionary } from "@/i18n/locales/uz-Latn-UZ";
 import { notifyGroupMembers } from "@/lib/notifications/notify";
 
@@ -23,10 +32,17 @@ export async function createAssignmentAction(
   formData: FormData,
 ): Promise<AssignmentState> {
   const user = await requirePermission("assignment:create:owned_group");
+  const sourceAttachment = formData.get("sourceFile");
+  const sourceFile =
+    sourceAttachment instanceof File && sourceAttachment.size > 0
+      ? sourceAttachment
+      : null;
   const parsed = createAssignmentSchema.safeParse({
     groupId: formData.get("groupId"),
     title: formData.get("title"),
     description: formData.get("description"),
+    section: formData.get("section"),
+    responseMode: formData.get("responseMode"),
     dueAt: formData.get("dueAt"),
     maxScore: formData.get("maxScore") || 100,
     rubric: formData.get("rubric"),
@@ -36,7 +52,29 @@ export async function createAssignmentAction(
   const group = await getAccessibleGroup({ groupId: parsed.data.groupId, organizationId: user.organizationId, userId: user.id, role: user.role });
   if (!group) return { status: "error", message: t.errors.notAllowed };
 
+  let storedSourceFile = null;
+  try {
+    storedSourceFile = sourceFile ? await storeUploadedFile(sourceFile) : null;
+  } catch {
+    return { status: "error", message: t.errors.invalidData };
+  }
+
   await prisma.$transaction(async (tx) => {
+    const sourceFileAsset = storedSourceFile
+      ? await tx.fileAsset.create({
+          data: {
+            organizationId: user.organizationId,
+            ownerId: user.id,
+            kind: storedSourceFile.kind,
+            storageKey: storedSourceFile.storageKey,
+            originalName: storedSourceFile.originalName,
+            mimeType: storedSourceFile.mimeType,
+            size: storedSourceFile.size,
+          },
+          select: { id: true },
+        })
+      : null;
+
     const assignment = await tx.assignment.create({
       data: {
         organizationId: user.organizationId,
@@ -44,6 +82,9 @@ export async function createAssignmentAction(
         teacherId: user.id,
         title: parsed.data.title,
         description: parsed.data.description,
+        section: parsed.data.section,
+        responseMode: parsed.data.responseMode,
+        sourceFileId: sourceFileAsset?.id,
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
         maxScore: parsed.data.maxScore,
         rubric: parsed.data.rubric ? { text: parsed.data.rubric } : undefined,
@@ -93,7 +134,20 @@ export async function submitAssignmentAction(
       status: AssignmentStatus.PUBLISHED,
       group: { members: { some: { userId: user.id, role: GroupMemberRole.STUDENT } } },
     },
-    select: { id: true, groupId: true },
+    select: {
+      id: true,
+      groupId: true,
+      title: true,
+      responseMode: true,
+      group: {
+        select: {
+          name: true,
+          telegramEnabled: true,
+          telegramBotToken: true,
+          telegramChatId: true,
+        },
+      },
+    },
   });
   if (!assignment) return { status: "error", message: t.errors.notAllowed };
 
@@ -104,6 +158,12 @@ export async function submitAssignmentAction(
   } catch {
     return { status: "error", message: t.errors.invalidData };
   }
+
+  if (storedFile && !isExpectedSubmissionKind(assignment.responseMode, storedFile.kind)) {
+    return { status: "error", message: t.errors.invalidData };
+  }
+
+  let createdFileId: string | null = null;
 
   await prisma.$transaction(async (tx) => {
     const submission = await tx.assignmentSubmission.upsert({
@@ -132,6 +192,7 @@ export async function submitAssignmentAction(
         },
         select: { id: true },
       });
+      createdFileId = fileAsset.id;
 
       await tx.assignmentSubmissionAttachment.create({
         data: {
@@ -145,9 +206,29 @@ export async function submitAssignmentAction(
   await prisma.auditLog.create({
     data: { organizationId: user.organizationId, userId: user.id, action: AuditAction.ASSIGNMENT_SUBMITTED, metadata: { assignmentId: assignment.id } },
   });
+
+  if (createdFileId && assignment.group.telegramEnabled) {
+    await offloadAssignmentFileToTelegram({
+      fileId: createdFileId,
+      telegramBotToken: assignment.group.telegramBotToken,
+      telegramChatId: assignment.group.telegramChatId,
+      caption: `${assignment.group.name}\n${assignment.title}\n${user.fullName}`,
+    });
+  }
   revalidatePath("/student/assignments");
   revalidatePath("/teacher/assignments");
   return { status: "success", message: t.submitted };
+}
+
+function isExpectedSubmissionKind(
+  responseMode: AssignmentResponseMode,
+  kind: FileAssetKind,
+) {
+  if (responseMode === AssignmentResponseMode.AUDIO) return kind === FileAssetKind.AUDIO;
+  if (responseMode === AssignmentResponseMode.IMAGE) return kind === FileAssetKind.IMAGE;
+  if (responseMode === AssignmentResponseMode.VIDEO) return kind === FileAssetKind.VIDEO;
+  if (responseMode === AssignmentResponseMode.FILE) return kind === FileAssetKind.FILE;
+  return true;
 }
 
 export async function returnSubmissionForRevisionAction(formData: FormData) {

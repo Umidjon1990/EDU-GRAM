@@ -42,7 +42,7 @@ type ChatMessage = {
   };
   attachments: {
     id: string;
-    kind: "FILE" | "AUDIO";
+    kind: "FILE" | "AUDIO" | "IMAGE" | "VIDEO";
     originalName: string;
     mimeType: string;
     size: number;
@@ -535,7 +535,7 @@ export function ChatPanel({
           {t.attachment}
           <span className="font-medium">({t.attachmentHint})</span>
           <input
-            accept="application/pdf,image/jpeg,image/png,image/webp,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*"
+            accept="application/pdf,image/jpeg,image/png,image/webp,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,audio/*,video/mp4,video/webm,video/quicktime"
             className="sr-only"
             name="attachment"
             ref={fileInputRef}

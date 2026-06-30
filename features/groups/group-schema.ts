@@ -24,4 +24,11 @@ export const removeGroupMemberSchema = z.object({
   memberId: z.string().cuid("A'zo topilmadi"),
 });
 
+export const updateGroupTelegramSchema = z.object({
+  groupId: z.string().cuid("Guruh topilmadi"),
+  telegramEnabled: z.boolean(),
+  telegramBotToken: z.string().trim().max(200).optional().or(z.literal("")),
+  telegramChatId: z.string().trim().max(80).optional().or(z.literal("")),
+});
+
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;

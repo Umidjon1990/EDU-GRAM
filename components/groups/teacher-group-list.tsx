@@ -126,19 +126,35 @@ export function TeacherGroupList({
                   {t.telegramEnabled}
                 </label>
                 <div className="grid gap-2 md:grid-cols-2">
-                  <input
-                    className="h-11 rounded-2xl border border-border bg-background px-3 text-sm outline-none"
-                    defaultValue={group.telegramBotToken ?? ""}
-                    name="telegramBotToken"
-                    placeholder={t.telegramBotToken}
-                    type="password"
-                  />
-                  <input
-                    className="h-11 rounded-2xl border border-border bg-background px-3 text-sm outline-none"
-                    defaultValue={group.telegramChatId ?? ""}
-                    name="telegramChatId"
-                    placeholder={t.telegramChatId}
-                  />
+                  <label className="grid gap-1">
+                    <span className="text-xs font-black text-muted-foreground">
+                      {t.telegramBotToken}
+                    </span>
+                    <input
+                      className="h-11 rounded-2xl border border-border bg-background px-3 text-sm outline-none"
+                      defaultValue={group.telegramBotToken ?? ""}
+                      name="telegramBotToken"
+                      placeholder="1234567890:AA..."
+                      type="password"
+                    />
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {t.telegramTokenHelp}
+                    </span>
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="text-xs font-black text-muted-foreground">
+                      {t.telegramChatId}
+                    </span>
+                    <input
+                      className="h-11 rounded-2xl border border-border bg-background px-3 text-sm outline-none"
+                      defaultValue={group.telegramChatId ?? ""}
+                      name="telegramChatId"
+                      placeholder="123456789 yoki -1001234567890"
+                    />
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {t.telegramChatIdHelp}
+                    </span>
+                  </label>
                 </div>
                 <Button type="submit" variant="secondary">
                   {t.telegramSave}

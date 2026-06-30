@@ -16,8 +16,9 @@ export default async function NotificationsPage() {
   const notifications = await prisma.notification.findMany({
     where: { organizationId: user.organizationId, userId: user.id },
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: 100,
   });
+  const groupedNotifications = groupNotifications(notifications);
 
   return (
     <AppShell fullName={user.fullName} role={user.role}>
@@ -35,11 +36,11 @@ export default async function NotificationsPage() {
           </form>
         </section>
 
-        {notifications.length === 0 ? (
+        {groupedNotifications.length === 0 ? (
           <p className="rounded-3xl border border-border bg-card p-6 text-muted-foreground">{t.empty}</p>
         ) : (
           <section className="grid gap-3">
-            {notifications.map((notification) => (
+            {groupedNotifications.map((notification) => (
               <article className="rounded-3xl border border-border bg-card p-5 shadow-sm" key={notification.id}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -52,7 +53,11 @@ export default async function NotificationsPage() {
                       </span>
                     </div>
                     <h2 className="mt-3 text-xl font-black">{notification.title}</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">{notification.body}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {notification.count > 1
+                        ? t.groupedMessages.replace("{count}", String(notification.count))
+                        : notification.body}
+                    </p>
                     <time className="mt-3 block text-xs font-semibold text-muted-foreground">
                       {formatUzDateTime(notification.createdAt)}
                     </time>
@@ -69,6 +74,45 @@ export default async function NotificationsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+type NotificationItem = Awaited<
+  ReturnType<typeof prisma.notification.findMany>
+>[number];
+
+function groupNotifications(notifications: NotificationItem[]) {
+  const grouped = new Map<
+    string,
+    NotificationItem & { count: number }
+  >();
+
+  for (const notification of notifications) {
+    const key =
+      notification.kind === "MESSAGE" && notification.href
+        ? `MESSAGE:${notification.href}`
+        : notification.id;
+    const existing = grouped.get(key);
+
+    if (!existing) {
+      grouped.set(key, { ...notification, count: 1 });
+      continue;
+    }
+
+    grouped.set(key, {
+      ...existing,
+      body: notification.body,
+      count: existing.count + 1,
+      createdAt:
+        notification.createdAt > existing.createdAt
+          ? notification.createdAt
+          : existing.createdAt,
+      readAt: existing.readAt && notification.readAt ? existing.readAt : null,
+    });
+  }
+
+  return Array.from(grouped.values()).sort(
+    (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
   );
 }
 

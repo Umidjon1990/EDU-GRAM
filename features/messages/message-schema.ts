@@ -33,4 +33,13 @@ export const createAssignmentFromMessageSchema = z.object({
   messageId: z.string().cuid("Xabar topilmadi"),
 });
 
+export const clearGroupChatSchema = z.object({
+  groupId: z.string().cuid("Guruh topilmadi"),
+});
+
+export const clearOldAudioMessagesSchema = z.object({
+  groupId: z.string().cuid("Guruh topilmadi"),
+  olderThanHours: z.coerce.number().int().min(1).max(8760),
+});
+
 export type CreateMessageInput = z.infer<typeof createMessageSchema>;

@@ -27,12 +27,9 @@ export async function AppShell({ children, fullName, role }: AppShellProps) {
   const navigationItems = getNavigationItems(role);
   const currentUser = await getCurrentUser();
   const unreadNotifications = currentUser
-    ? await prisma.notification.count({
-        where: {
-          organizationId: currentUser.organizationId,
-          userId: currentUser.id,
-          readAt: null,
-        },
+    ? await getGroupedUnreadNotificationCount({
+        organizationId: currentUser.organizationId,
+        userId: currentUser.id,
       })
     : 0;
 
@@ -88,4 +85,33 @@ export async function AppShell({ children, fullName, role }: AppShellProps) {
       </div>
     </main>
   );
+}
+
+async function getGroupedUnreadNotificationCount({
+  organizationId,
+  userId,
+}: {
+  organizationId: string;
+  userId: string;
+}) {
+  const notifications = await prisma.notification.findMany({
+    where: {
+      organizationId,
+      userId,
+      readAt: null,
+    },
+    select: { href: true, id: true, kind: true },
+    take: 200,
+  });
+  const keys = new Set<string>();
+
+  for (const notification of notifications) {
+    keys.add(
+      notification.kind === "MESSAGE" && notification.href
+        ? `MESSAGE:${notification.href}`
+        : notification.id,
+    );
+  }
+
+  return keys.size;
 }

@@ -35,14 +35,46 @@ async function markRecentMessagesRead({
     select: { id: true },
   });
 
-  if (unreadMessages.length === 0) return;
+  await prisma.$transaction(async (tx) => {
+    if (unreadMessages.length > 0) {
+      await tx.messageReadReceipt.createMany({
+        data: unreadMessages.map((message) => ({
+          messageId: message.id,
+          userId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await tx.notification.updateMany({
+      where: {
+        organizationId,
+        userId,
+        kind: "MESSAGE",
+        readAt: null,
+        href: { in: [`/student/groups/${groupId}`, `/teacher/groups/${groupId}`] },
+      },
+      data: { readAt: new Date() },
+    });
+  });
+}
 
-  await prisma.messageReadReceipt.createMany({
-    data: unreadMessages.map((message) => ({
-      messageId: message.id,
-      userId,
-    })),
-    skipDuplicates: true,
+async function countUnreadMessages({
+  groupId,
+  organizationId,
+  userId,
+}: {
+  groupId: string;
+  organizationId: string;
+  userId: string;
+}) {
+  return prisma.message.count({
+    where: {
+      groupId,
+      organizationId,
+      senderId: { not: userId },
+      deletedAt: null,
+      readReceipts: { none: { userId } },
+    },
   });
 }
 
@@ -160,6 +192,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           return;
         }
 
+        const unreadCount = await countUnreadMessages({
+          groupId: accessibleGroupId,
+          organizationId,
+          userId: currentUserId,
+        });
         await markRecentMessagesRead({
           groupId: accessibleGroupId,
           organizationId,
@@ -172,7 +209,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           canInspectReads,
         );
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(messages)}\n\n`),
+          encoder.encode(`data: ${JSON.stringify({ messages, unreadCount })}\n\n`),
         );
       }
 

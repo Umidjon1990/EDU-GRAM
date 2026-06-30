@@ -19,6 +19,8 @@ import {
 import {
   createMessageAction,
   createAssignmentFromMessageAction,
+  clearGroupChatAction,
+  clearOldAudioMessagesAction,
   deleteMessageAction,
   editMessageAction,
   type MessageActionState,
@@ -70,6 +72,7 @@ type ChatPanelProps = {
   currentUserId: string;
   groupId: string;
   initialMessages: ChatMessage[];
+  initialUnreadCount?: number;
 };
 
 const initialState: MessageActionState = {
@@ -85,6 +88,7 @@ export function ChatPanel({
   currentUserId,
   groupId,
   initialMessages,
+  initialUnreadCount = 0,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [streamStatus, setStreamStatus] =
@@ -109,6 +113,11 @@ export function ChatPanel({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  const [openImage, setOpenImage] = useState<{
+    name: string;
+    src: string;
+  } | null>(null);
 
   const clearFilePreview = useCallback((updateState = true) => {
     if (filePreviewUrlRef.current) {
@@ -148,8 +157,17 @@ export function ChatPanel({
     eventSource.onopen = () => setStreamStatus("connected");
     eventSource.onerror = () => setStreamStatus("disconnected");
     eventSource.onmessage = (event) => {
-      const nextMessages = JSON.parse(event.data) as ChatMessage[];
-      setMessages(nextMessages);
+      const payload = JSON.parse(event.data) as
+        | ChatMessage[]
+        | { messages: ChatMessage[]; unreadCount: number };
+
+      if (Array.isArray(payload)) {
+        setMessages(payload);
+        return;
+      }
+
+      setMessages(payload.messages);
+      setUnreadCount(payload.unreadCount);
     };
 
     return () => eventSource.close();
@@ -344,6 +362,13 @@ export function ChatPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5">
+        {unreadCount > 0 ? (
+          <div className="sticky top-0 z-10 mb-3 flex justify-center">
+            <span className="rounded-full bg-primary px-4 py-2 text-sm font-black text-primary-foreground shadow-sm">
+              {t.unreadBanner.replace("{count}", String(unreadCount))}
+            </span>
+          </div>
+        ) : null}
         {messages.length === 0 ? (
           <p className="rounded-2xl bg-muted px-4 py-5 text-muted-foreground">
             {t.empty}
@@ -449,6 +474,7 @@ export function ChatPanel({
                               <audio
                                 className="w-full"
                                 controls
+                                controlsList="nodownload"
                                 data-audio-id={attachment.id}
                                 preload="none"
                                 src={`/api/files/${attachment.id}`}
@@ -471,25 +497,51 @@ export function ChatPanel({
                             </>
                           ) : null}
                           {attachment.kind === "IMAGE" ? (
-                            <img
-                              alt={attachment.originalName}
-                              className="mb-3 max-h-80 w-full rounded-2xl object-cover"
-                              loading="lazy"
+                            <button
+                              className="mb-3 block w-full overflow-hidden rounded-2xl text-left"
+                              onClick={() =>
+                                setOpenImage({
+                                  name: attachment.originalName,
+                                  src: `/api/files/${attachment.id}`,
+                                })
+                              }
+                              type="button"
+                            >
+                              <img
+                                alt={attachment.originalName}
+                                className="max-h-80 w-full object-cover transition hover:scale-[1.01]"
+                                loading="lazy"
+                                src={`/api/files/${attachment.id}`}
+                              />
+                            </button>
+                          ) : null}
+                          {attachment.kind === "VIDEO" ? (
+                            <video
+                              className="mb-3 max-h-80 w-full rounded-2xl"
+                              controls
+                              controlsList="nodownload"
+                              preload="metadata"
                               src={`/api/files/${attachment.id}`}
                             />
                           ) : null}
-                          <a
-                            className="mt-2 flex items-center justify-between gap-3 text-sm font-bold"
-                            href={`/api/files/${attachment.id}`}
-                          >
-                            <span className="min-w-0 truncate">
-                              {attachment.originalName}
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1">
-                              {formatSize(attachment.size)}
-                              <Download aria-hidden className="size-4" />
-                            </span>
-                          </a>
+                          {attachment.kind === "FILE" ? (
+                            <a
+                              className="mt-2 flex items-center justify-between gap-3 text-sm font-bold"
+                              href={`/api/files/${attachment.id}`}
+                            >
+                              <span className="min-w-0 truncate">
+                                {attachment.originalName}
+                              </span>
+                              <span className="flex shrink-0 items-center gap-1">
+                                {formatSize(attachment.size)}
+                                <Download aria-hidden className="size-4" />
+                              </span>
+                            </a>
+                          ) : (
+                            <p className="mt-2 text-xs font-semibold opacity-75">
+                              {attachment.originalName} · {formatSize(attachment.size)}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -726,6 +778,81 @@ export function ChatPanel({
           </p>
         ) : null}
       </form>
+      {canPin ? <ChatMaintenance groupId={groupId} /> : null}
+      {openImage ? (
+        <div className="fixed inset-0 z-50 grid bg-black/80 p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3 self-start text-white">
+            <p className="truncate text-sm font-black">{openImage.name}</p>
+            <button
+              className="grid size-10 place-items-center rounded-full bg-white/15"
+              onClick={() => setOpenImage(null)}
+              type="button"
+            >
+              <X aria-hidden className="size-5" />
+            </button>
+          </div>
+          <button
+            aria-label={t.closePreview}
+            className="grid min-h-0 place-items-center"
+            onClick={() => setOpenImage(null)}
+            type="button"
+          >
+            <img
+              alt={openImage.name}
+              className="max-h-[82dvh] max-w-full rounded-2xl object-contain"
+              src={openImage.src}
+            />
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ChatMaintenance({ groupId }: { groupId: string }) {
+  return (
+    <section className="border-t border-border bg-card p-3 sm:p-4">
+      <details className="rounded-2xl border border-border bg-background p-4">
+        <summary className="cursor-pointer text-sm font-black">
+          {t.maintenanceTitle}
+        </summary>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t.maintenanceDescription}
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          <form action={clearOldAudioMessagesAction} className="grid gap-2">
+            <input name="groupId" type="hidden" value={groupId} />
+            <label className="text-xs font-black text-muted-foreground">
+              {t.audioRetentionHours}
+            </label>
+            <input
+              className="h-11 rounded-2xl border border-border bg-card px-3 text-sm font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              defaultValue={24}
+              min={1}
+              name="olderThanHours"
+              placeholder={t.audioRetentionPlaceholder}
+              type="number"
+            />
+            <Button type="submit" variant="secondary">
+              {t.clearOldAudio}
+            </Button>
+          </form>
+          <form
+            action={clearGroupChatAction}
+            className="grid content-end"
+            onSubmit={(event) => {
+              if (!window.confirm(t.clearAllConfirm)) {
+                event.preventDefault();
+              }
+            }}
+          >
+            <input name="groupId" type="hidden" value={groupId} />
+            <Button type="submit" variant="secondary">
+              {t.clearAllMessages}
+            </Button>
+          </form>
+        </div>
+      </details>
     </section>
   );
 }

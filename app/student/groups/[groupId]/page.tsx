@@ -36,6 +36,7 @@ export default async function StudentGroupChatPage({
   }
 
   const messages = await getInitialMessages(group.id, user.organizationId, user.id, false);
+  const unreadCount = await getUnreadMessageCount(group.id, user.organizationId, user.id);
   const pinnedMessages = await prisma.pinnedMessage.findMany({
     where: { groupId: group.id },
     orderBy: { createdAt: "desc" },
@@ -64,6 +65,7 @@ export default async function StudentGroupChatPage({
             currentUserId={user.id}
             groupId={group.id}
             initialMessages={messages}
+            initialUnreadCount={unreadCount}
           />
           <aside className="xl:sticky xl:top-36 xl:max-h-[calc(100dvh-10rem)] xl:overflow-y-auto">
             <PinnedList items={pinnedMessages} />
@@ -72,6 +74,22 @@ export default async function StudentGroupChatPage({
       </div>
     </AppShell>
   );
+}
+
+async function getUnreadMessageCount(
+  groupId: string,
+  organizationId: string,
+  currentUserId: string,
+) {
+  return prisma.message.count({
+    where: {
+      groupId,
+      organizationId,
+      senderId: { not: currentUserId },
+      deletedAt: null,
+      readReceipts: { none: { userId: currentUserId } },
+    },
+  });
 }
 
 async function getInitialMessages(

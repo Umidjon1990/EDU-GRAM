@@ -30,14 +30,23 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   const data = await readStoredFile(attachment.file.storageKey);
   const encodedName = encodeURIComponent(attachment.file.originalName);
+  const disposition = isInlineFile(attachment.file.mimeType) ? "inline" : "attachment";
 
   return new Response(data, {
     headers: {
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodedName}`,
+      "Content-Disposition": `${disposition}; filename*=UTF-8''${encodedName}`,
       "Content-Type": attachment.file.mimeType,
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+function isInlineFile(mimeType: string) {
+  return (
+    mimeType.startsWith("image/") ||
+    mimeType.startsWith("audio/") ||
+    mimeType.startsWith("video/")
+  );
 }
 
 async function findAccessibleFile(

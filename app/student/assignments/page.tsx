@@ -65,7 +65,7 @@ export default async function StudentAssignmentsPage() {
                   {assignment.sourceFile ? (
                     assignment.sourceFile.storageDeletedAt ? (
                       <p className="mt-3 rounded-2xl bg-muted px-3 py-2 text-sm font-bold text-muted-foreground">
-                        {assignment.sourceFile.originalName} · {t.telegramOffloaded}
+                        {assignment.sourceFile.originalName} - {t.telegramOffloaded}
                       </p>
                     ) : (
                       <a className="mt-3 inline-flex rounded-2xl bg-muted px-3 py-2 text-sm font-bold text-primary" href={`/api/files/${assignment.sourceFile.id}`}>
@@ -117,7 +117,7 @@ export default async function StudentAssignmentsPage() {
                           {submission.attachments.map((attachment) => (
                             attachment.file.storageDeletedAt ? (
                               <p className="rounded-2xl bg-background px-3 py-2 text-sm font-bold text-muted-foreground" key={attachment.id}>
-                                {attachment.file.originalName} · {t.telegramOffloaded}
+                                {attachment.file.originalName} - {t.telegramOffloaded}
                               </p>
                             ) : (
                               <a className="rounded-2xl bg-background px-3 py-2 text-sm font-bold text-primary" href={`/api/files/${attachment.file.id}`} key={attachment.id}>

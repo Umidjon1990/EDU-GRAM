@@ -57,7 +57,7 @@ export default async function TeacherTestsPage() {
                   <div className="mt-3 grid gap-2">
                     {test.questions.map((question, index) => (
                       <p className="rounded-2xl bg-muted p-3 text-sm" key={question.id}>
-                        {index + 1}. {question.prompt} · {getQuestionTypeLabel(question.type)}
+                        {index + 1}. {question.prompt} - {getQuestionTypeLabel(question.type)}
                       </p>
                     ))}
                   </div>

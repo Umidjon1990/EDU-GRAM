@@ -12,6 +12,7 @@ import {
 import { revalidatePath } from "next/cache";
 
 import {
+  bulkCreateAssignmentsSchema,
   createAssignmentSchema,
   gradeSubmissionSchema,
   submitAssignmentSchema,
@@ -111,6 +112,95 @@ export async function createAssignmentAction(
   revalidatePath("/teacher/assignments");
   revalidatePath("/student/assignments");
   return { status: "success", message: t.created };
+}
+
+export async function bulkCreateAssignmentsAction(
+  _state: AssignmentState,
+  formData: FormData,
+): Promise<AssignmentState> {
+  const user = await requirePermission("assignment:create:owned_group");
+  let items: unknown = [];
+
+  try {
+    items = JSON.parse(String(formData.get("items") ?? "[]"));
+  } catch {
+    return { status: "error", message: t.errors.invalidData };
+  }
+
+  const parsed = bulkCreateAssignmentsSchema.safeParse({
+    groupId: formData.get("groupId"),
+    description: formData.get("description"),
+    dueAt: formData.get("dueAt"),
+    maxScore: formData.get("maxScore") || 100,
+    rubric: formData.get("rubric"),
+    items,
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? t.errors.invalidData,
+    };
+  }
+
+  const group = await getAccessibleGroup({
+    groupId: parsed.data.groupId,
+    organizationId: user.organizationId,
+    userId: user.id,
+    role: user.role,
+  });
+
+  if (!group) return { status: "error", message: t.errors.notAllowed };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.assignment.createMany({
+      data: parsed.data.items.map((item) => ({
+        organizationId: user.organizationId,
+        groupId: group.id,
+        teacherId: user.id,
+        title: item.title,
+        description: parsed.data.description || item.title,
+        section: item.section,
+        responseMode: item.responseMode,
+        dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
+        maxScore: parsed.data.maxScore,
+        rubric: parsed.data.rubric ? { text: parsed.data.rubric } : undefined,
+      })),
+    });
+
+    await tx.auditLog.create({
+      data: {
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: AuditAction.ASSIGNMENT_CREATED,
+        metadata: {
+          groupId: group.id,
+          count: parsed.data.items.length,
+          mode: "bulk",
+        },
+      },
+    });
+
+    await notifyGroupMembers({
+      tx,
+      organizationId: user.organizationId,
+      groupId: group.id,
+      actorId: user.id,
+      kind: NotificationKind.ASSIGNMENT,
+      title: t.bulkCreateTitle,
+      body: t.bulkCreated.replace("{count}", String(parsed.data.items.length)),
+      href: "/student/assignments",
+      onlyStudents: true,
+    });
+  });
+
+  revalidatePath("/teacher/assignments");
+  revalidatePath("/student/assignments");
+
+  return {
+    status: "success",
+    message: t.bulkCreated.replace("{count}", String(parsed.data.items.length)),
+  };
 }
 
 export async function submitAssignmentAction(

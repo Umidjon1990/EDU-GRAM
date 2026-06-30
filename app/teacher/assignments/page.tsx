@@ -1,6 +1,7 @@
 import { GroupMemberRole, GroupStatus, SubmissionStatus } from "@prisma/client";
 
 import { AssignmentForm } from "@/components/assignments/assignment-form";
+import { BulkAssignmentForm } from "@/components/assignments/bulk-assignment-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,7 +69,10 @@ export default async function TeacherAssignmentsPage() {
           <h1 className="mt-3 text-4xl font-black">{t.title}</h1>
         </section>
         <div className="grid gap-6 xl:grid-cols-[24rem_1fr]">
-          <AssignmentForm groups={groups} />
+          <div className="grid content-start gap-6">
+            <AssignmentForm groups={groups} />
+            <BulkAssignmentForm groups={groups} />
+          </div>
           <section className="grid gap-4">
             {assignments.length === 0 ? <p className="rounded-3xl border border-border bg-card p-6 text-muted-foreground">{t.noAssignments}</p> : assignments.map((assignment) => {
               const submittedStudentIds = new Set(assignment.submissions.map((submission) => submission.student.id));
@@ -94,7 +98,7 @@ export default async function TeacherAssignmentsPage() {
                 {assignment.sourceFile ? (
                   assignment.sourceFile.storageDeletedAt ? (
                     <p className="mt-3 rounded-2xl bg-muted px-3 py-2 text-sm font-bold text-muted-foreground">
-                      {assignment.sourceFile.originalName} · {t.telegramOffloaded}
+                      {assignment.sourceFile.originalName} - {t.telegramOffloaded}
                     </p>
                   ) : (
                     <a className="mt-3 inline-flex rounded-2xl bg-muted px-3 py-2 text-sm font-bold text-primary" href={`/api/files/${assignment.sourceFile.id}`}>
@@ -114,7 +118,14 @@ export default async function TeacherAssignmentsPage() {
                   </div>
                 ) : null}
                 <div className="mt-4 rounded-2xl bg-muted p-3">
-                  <p className="font-black">{t.completion}</p>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-black">{t.completion}</p>
+                    <Button asChild size="md" variant="secondary">
+                      <a href={`/api/assignments/${assignment.id}/report.pdf`}>
+                        {t.downloadPdf}
+                      </a>
+                    </Button>
+                  </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {t.submittedCount
                       .replace("{submitted}", String(assignment.submissions.length))
@@ -125,6 +136,55 @@ export default async function TeacherAssignmentsPage() {
                       {t.notSubmitted}: {missingStudents.map((member) => member.user.fullName).join(", ")}
                     </p>
                   ) : null}
+                </div>
+                <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
+                  <table className="w-full min-w-[42rem] text-left text-sm">
+                    <thead className="bg-muted text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 font-bold">{t.studentName}</th>
+                        <th className="px-3 py-2 font-bold">{t.submissionStatus}</th>
+                        <th className="px-3 py-2 font-bold">{t.submittedAt}</th>
+                        <th className="px-3 py-2 font-bold">{t.telegramStatus}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {assignment.group.members.map((member) => {
+                        const submission = assignment.submissions.find(
+                          (item) => item.student.id === member.user.id,
+                        );
+                        const sentToTelegram = submission?.attachments.some(
+                          (attachment) => attachment.file.storageDeletedAt,
+                        );
+
+                        return (
+                          <tr className="border-t border-border" key={member.user.id}>
+                            <td className="px-3 py-2 font-bold">{member.user.fullName}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={
+                                  submission
+                                    ? "rounded-full bg-success/10 px-3 py-1 text-xs font-black text-success"
+                                    : "rounded-full bg-danger/10 px-3 py-1 text-xs font-black text-danger"
+                                }
+                              >
+                                {submission ? t.submittedStatus : t.missingStatus}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {submission ? formatUzDateTime(submission.submittedAt) : "-"}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {submission
+                                ? sentToTelegram
+                                  ? t.sentToTelegram
+                                  : t.notSentToTelegram
+                                : "-"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
                 <h3 className="mt-5 font-black">{t.submissions}</h3>
                 {assignment.submissions.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">{t.noSubmissions}</p> : (

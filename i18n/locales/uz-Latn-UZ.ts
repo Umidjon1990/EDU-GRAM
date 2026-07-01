@@ -387,6 +387,7 @@ export const assignmentDictionary = {
   bulkCreate: "Barchasini yaratish",
   bulkCreated: "{count} ta topshiriq yaratildi",
   chooseGroup: "Guruhni tanlang",
+  batchTitlePlaceholder: "Dars nomi, masalan: 6-dars",
   titlePlaceholder: "Topshiriq nomi",
   descriptionPlaceholder: "Topshiriq tavsifi",
   section: "Bo'lim",

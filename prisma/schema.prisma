@@ -145,6 +145,7 @@ model Organization {
   messages  Message[]
   files     FileAsset[]
   announcements Announcement[]
+  assignmentBatches AssignmentBatch[]
   assignments Assignment[]
   tests Test[]
   notifications Notification[]
@@ -176,6 +177,7 @@ model User {
   messageReadReceipts MessageReadReceipt[]
   files          FileAsset[]
   announcements Announcement[]
+  assignmentBatches AssignmentBatch[]
   assignments Assignment[]
   submissions AssignmentSubmission[]
   tests Test[]
@@ -210,6 +212,7 @@ model Group {
   messages     Message[]
   pinnedMessages PinnedMessage[]
   announcements Announcement[]
+  assignmentBatches AssignmentBatch[]
   assignments Assignment[]
   tests Test[]
 
@@ -217,11 +220,32 @@ model Group {
   @@index([organizationId, status])
 }
 
+model AssignmentBatch {
+  id             String   @id @default(cuid())
+  organizationId String
+  groupId        String
+  teacherId      String
+  title          String
+  description    String?
+  dueAt          DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  assignments  Assignment[]
+
+  @@index([organizationId, groupId, createdAt])
+  @@index([teacherId, createdAt])
+}
+
 model Assignment {
   id             String           @id @default(cuid())
   organizationId String
   groupId        String
   teacherId      String
+  batchId        String?
   title          String
   description    String
   section        AssignmentSection @default(CUSTOM)
@@ -240,10 +264,12 @@ model Assignment {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   teacher      User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  batch        AssignmentBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
   sourceFile   FileAsset?   @relation("AssignmentSourceFile", fields: [sourceFileId], references: [id], onDelete: SetNull)
   submissions  AssignmentSubmission[]
 
   @@index([organizationId, groupId, createdAt])
+  @@index([batchId])
   @@index([teacherId, createdAt])
   @@index([sourceFileId])
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const createAssignmentSchema = z.object({
   groupId: z.string().cuid("Guruh topilmadi"),
+  batchTitle: z.string().trim().min(2, "Dars nomini kiriting").max(160),
   title: z.string().trim().min(2, "Topshiriq nomini kiriting").max(160),
   description: z.string().trim().min(3, "Topshiriq matnini kiriting").max(5000),
   responseMode: z.nativeEnum(AssignmentResponseMode),
@@ -15,6 +16,7 @@ export const createAssignmentSchema = z.object({
 
 export const bulkCreateAssignmentsSchema = z.object({
   groupId: z.string().cuid("Guruh topilmadi"),
+  batchTitle: z.string().trim().min(2, "Dars nomini kiriting").max(160),
   description: z.string().trim().max(5000).optional().or(z.literal("")),
   dueAt: z.string().optional(),
   maxAttachmentCount: z.coerce.number().int().min(1).max(5).default(1),
@@ -47,9 +49,11 @@ export const gradeSubmissionSchema = z.object({
   feedback: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
-export const updateAssignmentSchema = createAssignmentSchema.extend({
-  assignmentId: z.string().cuid("Topshiriq topilmadi"),
-});
+export const updateAssignmentSchema = createAssignmentSchema
+  .omit({ batchTitle: true })
+  .extend({
+    assignmentId: z.string().cuid("Topshiriq topilmadi"),
+  });
 
 export const deleteAssignmentSchema = z.object({
   assignmentId: z.string().cuid("Topshiriq topilmadi"),

@@ -42,6 +42,7 @@ export async function createAssignmentAction(
       : null;
   const parsed = createAssignmentSchema.safeParse({
     groupId: formData.get("groupId"),
+    batchTitle: formData.get("batchTitle"),
     title: formData.get("title"),
     description: formData.get("description"),
     responseMode: formData.get("responseMode"),
@@ -64,6 +65,18 @@ export async function createAssignmentAction(
   }
 
   await prisma.$transaction(async (tx) => {
+    const batch = await tx.assignmentBatch.create({
+      data: {
+        organizationId: user.organizationId,
+        groupId: group.id,
+        teacherId: user.id,
+        title: parsed.data.batchTitle,
+        description: parsed.data.description,
+        dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
+      },
+      select: { id: true },
+    });
+
     const sourceFileAsset = storedSourceFile
       ? await tx.fileAsset.create({
           data: {
@@ -84,6 +97,7 @@ export async function createAssignmentAction(
         organizationId: user.organizationId,
         groupId: group.id,
         teacherId: user.id,
+        batchId: batch.id,
         title: parsed.data.title,
         description: parsed.data.description,
         section: getDefaultSection(parsed.data.responseMode),
@@ -135,6 +149,7 @@ export async function bulkCreateAssignmentsAction(
 
   const parsed = bulkCreateAssignmentsSchema.safeParse({
     groupId: formData.get("groupId"),
+    batchTitle: formData.get("batchTitle"),
     description: formData.get("description"),
     dueAt: formData.get("dueAt"),
     maxAttachmentCount: formData.get("maxAttachmentCount"),
@@ -161,11 +176,24 @@ export async function bulkCreateAssignmentsAction(
   if (!group) return { status: "error", message: t.errors.notAllowed };
 
   await prisma.$transaction(async (tx) => {
+    const batch = await tx.assignmentBatch.create({
+      data: {
+        organizationId: user.organizationId,
+        groupId: group.id,
+        teacherId: user.id,
+        title: parsed.data.batchTitle,
+        description: parsed.data.description || null,
+        dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
+      },
+      select: { id: true },
+    });
+
     await tx.assignment.createMany({
       data: parsed.data.items.map((item) => ({
         organizationId: user.organizationId,
         groupId: group.id,
         teacherId: user.id,
+        batchId: batch.id,
         title: item.title,
         description: parsed.data.description || item.title,
         section: getDefaultSection(item.responseMode),

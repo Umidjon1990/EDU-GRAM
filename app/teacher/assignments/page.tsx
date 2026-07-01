@@ -40,6 +40,7 @@ export default async function TeacherAssignmentsPage() {
             },
           },
         },
+        batch: { select: { id: true, title: true, createdAt: true, dueAt: true } },
         sourceFile: {
           select: {
             id: true,
@@ -87,6 +88,9 @@ export default async function TeacherAssignmentsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-primary">{assignment.group.name}</p>
+                    <p className="mt-1 text-sm font-black text-muted-foreground">
+                      {assignment.batch?.title ?? formatUzDate(assignment.createdAt)}
+                    </p>
                     <h2 className="mt-1 text-2xl font-black">{assignment.title}</h2>
                   </div>
                   <span className="rounded-full bg-muted px-3 py-1 text-sm font-black">

@@ -20,6 +20,7 @@ export function AssignmentForm({ groups }: { groups: { id: string; name: string 
           <option value="">{t.chooseGroup}</option>
           {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
+        <input className="rounded-2xl border border-border bg-background px-4 py-3" name="batchTitle" placeholder={t.batchTitlePlaceholder} required />
         <input className="rounded-2xl border border-border bg-background px-4 py-3" name="title" placeholder={t.titlePlaceholder} required />
         <select className="rounded-2xl border border-border bg-background px-4 py-3" name="responseMode" required>
           {responseModes.map((mode) => (

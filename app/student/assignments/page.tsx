@@ -21,6 +21,7 @@ export default async function StudentAssignmentsPage() {
     orderBy: { createdAt: "desc" },
     include: {
       group: { select: { name: true } },
+      batch: { select: { id: true, title: true, createdAt: true, dueAt: true } },
       sourceFile: {
         select: {
           id: true,
@@ -174,17 +175,19 @@ function formatSeconds(seconds: number) {
   return `${Math.round(seconds / 60)} daqiqa`;
 }
 
-function groupAssignmentsByDate<T extends { createdAt: Date }>(assignments: T[]) {
+function groupAssignmentsByDate<T extends { createdAt: Date; batch?: { id: string; title: string; createdAt: Date } | null }>(assignments: T[]) {
   const folders = new Map<string, { key: string; label: string; assignments: T[] }>();
 
   for (const assignment of assignments) {
-    const key = new Intl.DateTimeFormat("sv-SE", {
+    const key = assignment.batch?.id ?? new Intl.DateTimeFormat("sv-SE", {
       day: "2-digit",
       month: "2-digit",
       timeZone: "Asia/Tashkent",
       year: "numeric",
     }).format(assignment.createdAt);
-    const label = new Intl.DateTimeFormat("uz-Latn-UZ", {
+    const label = assignment.batch
+      ? assignment.batch.title
+      : new Intl.DateTimeFormat("uz-Latn-UZ", {
       day: "2-digit",
       month: "long",
       timeZone: "Asia/Tashkent",

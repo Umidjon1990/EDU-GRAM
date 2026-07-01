@@ -95,6 +95,12 @@ export function BulkAssignmentForm({
             </option>
           ))}
         </select>
+        <input
+          className="rounded-2xl border border-border bg-background px-4 py-3"
+          name="batchTitle"
+          placeholder={t.batchTitlePlaceholder}
+          required
+        />
 
         <div className="grid gap-3">
           {rows.map((row, index) => (

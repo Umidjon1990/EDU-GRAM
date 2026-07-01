@@ -58,3 +58,7 @@ export const updateAssignmentSchema = createAssignmentSchema
 export const deleteAssignmentSchema = z.object({
   assignmentId: z.string().cuid("Topshiriq topilmadi"),
 });
+
+export const deleteAssignmentBatchSchema = z.object({
+  batchId: z.string().cuid("Dars papkasi topilmadi"),
+});

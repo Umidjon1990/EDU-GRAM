@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import {
   bulkCreateAssignmentsSchema,
   createAssignmentSchema,
+  deleteAssignmentBatchSchema,
   deleteAssignmentSchema,
   gradeSubmissionSchema,
   submitAssignmentSchema,
@@ -365,6 +366,83 @@ export async function deleteAssignmentAction(formData: FormData) {
       metadata: {
         assignmentId: assignment.id,
         mode: "deleted",
+      },
+    },
+  });
+
+  revalidatePath("/teacher/assignments");
+  revalidatePath("/student/assignments");
+}
+
+export async function deleteAssignmentBatchAction(formData: FormData) {
+  const user = await requirePermission("assignment:create:owned_group");
+  const parsed = deleteAssignmentBatchSchema.safeParse({
+    batchId: formData.get("batchId"),
+  });
+
+  if (!parsed.success) return;
+
+  const batch = await prisma.assignmentBatch.findFirst({
+    where: {
+      id: parsed.data.batchId,
+      organizationId: user.organizationId,
+      teacherId: user.id,
+    },
+    select: {
+      id: true,
+      title: true,
+      assignments: {
+        select: {
+          sourceFile: {
+            select: { id: true, storageKey: true, storageDeletedAt: true },
+          },
+          submissions: {
+            select: {
+              attachments: {
+                select: {
+                  file: {
+                    select: { id: true, storageKey: true, storageDeletedAt: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!batch) return;
+
+  const files = batch.assignments
+    .flatMap((assignment) => [
+      assignment.sourceFile,
+      ...assignment.submissions.flatMap((submission) =>
+        submission.attachments.map((attachment) => attachment.file),
+      ),
+    ])
+    .filter((file): file is { id: string; storageKey: string; storageDeletedAt: Date | null } =>
+      Boolean(file),
+    );
+
+  await prisma.assignmentBatch.delete({ where: { id: batch.id } });
+
+  for (const file of files) {
+    if (!file.storageDeletedAt) {
+      await deleteStoredFile(file.storageKey);
+    }
+    await prisma.fileAsset.deleteMany({ where: { id: file.id } });
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: AuditAction.ASSIGNMENT_CREATED,
+      metadata: {
+        assignmentBatchId: batch.id,
+        assignmentBatchTitle: batch.title,
+        mode: "batch-deleted",
       },
     },
   });

@@ -468,6 +468,7 @@ export const assignmentDictionary = {
   editAssignment: "Topshiriqni tahrirlash",
   saveAssignment: "Topshiriqni saqlash",
   deleteAssignment: "Topshiriqni o'chirish",
+  deleteAssignmentBatch: "Umumiy topshiriqlarni o'chirish",
   submittedStatus: "Topshirgan",
   missingStatus: "Topshirmagan",
   returnForRevision: "Qayta ishlashga qaytarish",

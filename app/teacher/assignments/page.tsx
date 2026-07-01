@@ -5,6 +5,7 @@ import { BulkAssignmentForm } from "@/components/assignments/bulk-assignment-for
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import {
+  deleteAssignmentBatchAction,
   deleteAssignmentAction,
   gradeSubmissionAction,
   returnSubmissionForRevisionAction,
@@ -99,6 +100,14 @@ export default async function TeacherAssignmentsPage() {
                     </span>
                   </div>
                 </summary>
+                {folder.batchId ? (
+                  <form action={deleteAssignmentBatchAction} className="mt-4">
+                    <input name="batchId" type="hidden" value={folder.batchId} />
+                    <Button type="submit" variant="secondary">
+                      {t.deleteAssignmentBatch}
+                    </Button>
+                  </form>
+                ) : null}
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl bg-success/10 p-4 text-success">
                     <p className="text-3xl font-black">{folder.stats.completed}</p>
@@ -449,6 +458,7 @@ function groupTeacherAssignments<T extends TeacherAssignmentSummary>(assignments
       groupName: string;
       key: string;
       label: string;
+      batchId: string | null;
     }
   >();
 
@@ -465,6 +475,7 @@ function groupTeacherAssignments<T extends TeacherAssignmentSummary>(assignments
     if (!folders.has(key)) {
       folders.set(key, {
         assignments: [],
+        batchId: assignment.batch?.id ?? null,
         createdAt: assignment.batch?.createdAt ?? assignment.createdAt,
         groupName: assignment.group.name,
         key,

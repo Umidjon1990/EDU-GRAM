@@ -64,6 +64,7 @@ export default async function TeacherAssignmentsPage() {
       },
     }),
   ]);
+  const assignmentFolders = groupTeacherAssignments(assignments);
 
   return (
     <AppShell fullName={user.fullName} role={user.role}>
@@ -78,13 +79,88 @@ export default async function TeacherAssignmentsPage() {
             <BulkAssignmentForm groups={groups} />
           </div>
           <section className="grid gap-4">
-            {assignments.length === 0 ? <p className="rounded-3xl border border-border bg-card p-6 text-muted-foreground">{t.noAssignments}</p> : assignments.map((assignment) => {
+            {assignments.length === 0 ? <p className="rounded-3xl border border-border bg-card p-6 text-muted-foreground">{t.noAssignments}</p> : assignmentFolders.map((folder, folderIndex) => (
+              <details
+                className="rounded-3xl border border-border bg-card p-5 shadow-sm"
+                key={folder.key}
+                open={folderIndex === 0}
+              >
+                <summary className="cursor-pointer list-none">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-primary">{folder.groupName}</p>
+                      <h2 className="mt-1 text-3xl font-black">{folder.label}</h2>
+                      <p className="mt-1 text-sm font-bold text-muted-foreground">
+                        {t.createdAt}: {formatUzDate(folder.createdAt)}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-muted px-3 py-1 text-sm font-black text-muted-foreground">
+                      {folder.assignments.length} {t.assignmentsCount}
+                    </span>
+                  </div>
+                </summary>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-success/10 p-4 text-success">
+                    <p className="text-3xl font-black">{folder.stats.completed}</p>
+                    <p className="mt-1 text-sm font-bold">{t.fullCompleted}</p>
+                  </div>
+                  <div className="rounded-2xl bg-accent/15 p-4 text-accent-foreground">
+                    <p className="text-3xl font-black">{folder.stats.partial}</p>
+                    <p className="mt-1 text-sm font-bold">{t.partialCompleted}</p>
+                  </div>
+                  <div className="rounded-2xl bg-danger/10 p-4 text-danger">
+                    <p className="text-3xl font-black">{folder.stats.missing}</p>
+                    <p className="mt-1 text-sm font-bold">{t.notStarted}</p>
+                  </div>
+                </div>
+                <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
+                  <table className="w-full min-w-[44rem] text-left text-sm">
+                    <thead className="bg-muted text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 font-bold">{t.studentName}</th>
+                        <th className="px-3 py-2 font-bold">{t.lessonProgress}</th>
+                        {folder.assignments.map((assignment) => (
+                          <th className="px-3 py-2 font-bold" key={assignment.id}>
+                            {assignment.title}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {folder.studentRows.map((row) => (
+                        <tr className="border-t border-border" key={row.studentId}>
+                          <td className="px-3 py-2 font-bold">{row.fullName}</td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {row.submittedCount}/{folder.assignments.length}
+                          </td>
+                          {folder.assignments.map((assignment) => (
+                            <td className="px-3 py-2" key={assignment.id}>
+                              <span
+                                className={
+                                  row.submittedAssignmentIds.has(assignment.id)
+                                    ? "rounded-full bg-success/10 px-3 py-1 text-xs font-black text-success"
+                                    : "rounded-full bg-danger/10 px-3 py-1 text-xs font-black text-danger"
+                                }
+                              >
+                                {row.submittedAssignmentIds.has(assignment.id)
+                                  ? t.submittedStatus
+                                  : t.missingStatus}
+                              </span>
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-5 grid gap-4">
+            {folder.assignments.map((assignment) => {
               const submittedStudentIds = new Set(assignment.submissions.map((submission) => submission.student.id));
               const missingStudents = assignment.group.members.filter((member) => !submittedStudentIds.has(member.user.id));
               const rubric = getRubricText(assignment.rubric);
 
               return (
-              <article className="rounded-3xl border border-border bg-card p-5 shadow-sm" key={assignment.id}>
+              <article className="rounded-3xl border border-border bg-background p-5 shadow-sm" key={assignment.id}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-primary">{assignment.group.name}</p>
@@ -300,6 +376,9 @@ export default async function TeacherAssignmentsPage() {
               </article>
             );
             })}
+                </div>
+              </details>
+            ))}
           </section>
         </div>
       </div>
@@ -347,4 +426,94 @@ function formatDateInput(date: Date) {
   });
 
   return formatter.format(date).replace(" ", "T");
+}
+
+type TeacherAssignmentSummary = {
+  id: string;
+  title: string;
+  createdAt: Date;
+  batch: { id: string; title: string; createdAt: Date; dueAt: Date | null } | null;
+  group: {
+    name: string;
+    members: { user: { id: string; fullName: string } }[];
+  };
+  submissions: { student: { id: string; fullName: string } }[];
+};
+
+function groupTeacherAssignments<T extends TeacherAssignmentSummary>(assignments: T[]) {
+  const folders = new Map<
+    string,
+    {
+      assignments: T[];
+      createdAt: Date;
+      groupName: string;
+      key: string;
+      label: string;
+    }
+  >();
+
+  for (const assignment of assignments) {
+    const fallbackDateKey = new Intl.DateTimeFormat("sv-SE", {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: "Asia/Tashkent",
+      year: "numeric",
+    }).format(assignment.createdAt);
+    const key = assignment.batch?.id ?? `${assignment.group.name}-${fallbackDateKey}`;
+    const label = assignment.batch?.title ?? formatUzDate(assignment.createdAt);
+
+    if (!folders.has(key)) {
+      folders.set(key, {
+        assignments: [],
+        createdAt: assignment.batch?.createdAt ?? assignment.createdAt,
+        groupName: assignment.group.name,
+        key,
+        label,
+      });
+    }
+
+    folders.get(key)?.assignments.push(assignment);
+  }
+
+  return Array.from(folders.values()).map((folder) => {
+    const members = folder.assignments[0]?.group.members ?? [];
+    const studentRows = members.map((member) => {
+      const submittedAssignmentIds = new Set(
+        folder.assignments
+          .filter((assignment) =>
+            assignment.submissions.some(
+              (submission) => submission.student.id === member.user.id,
+            ),
+          )
+          .map((assignment) => assignment.id),
+      );
+
+      return {
+        fullName: member.user.fullName,
+        studentId: member.user.id,
+        submittedAssignmentIds,
+        submittedCount: submittedAssignmentIds.size,
+      };
+    });
+    const stats = studentRows.reduce(
+      (accumulator, row) => {
+        if (row.submittedCount === folder.assignments.length) {
+          accumulator.completed += 1;
+        } else if (row.submittedCount === 0) {
+          accumulator.missing += 1;
+        } else {
+          accumulator.partial += 1;
+        }
+
+        return accumulator;
+      },
+      { completed: 0, missing: 0, partial: 0 },
+    );
+
+    return {
+      ...folder,
+      stats,
+      studentRows,
+    };
+  });
 }
